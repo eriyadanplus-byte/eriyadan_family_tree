@@ -95,7 +95,7 @@ export default function PublicProfilePage() {
   const fetchMember = async (id: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/members/${id}`);
+      const res = await fetch(`/api/members/${id}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setMember(data);

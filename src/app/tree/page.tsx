@@ -126,7 +126,7 @@ function TreePageContent({ focusId }: { focusId: string | null }) {
     try {
       setError(null);
       const [membersRes, onlineRes] = await Promise.all([
-        fetch('/api/members'),
+        fetch('/api/members', { cache: 'no-store' }),
         fetch('/api/presence'),
       ]);
       if (!membersRes.ok) throw new Error('Failed to load members');

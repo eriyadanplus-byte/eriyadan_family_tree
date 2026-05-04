@@ -34,9 +34,14 @@ BEGIN
   first_word := upper(split_part(
     regexp_replace(btrim(pg_sql), '\s+', ' ', 'g'), ' ', 1));
 
-  -- SELECT or any DML with RETURNING → return rows as JSONB array
-  IF first_word = 'SELECT' OR pg_sql ~* '\mRETURNING\M' THEN
+  IF first_word = 'SELECT' THEN
+    -- Pure SELECT: wrap in subquery
     EXECUTE format('SELECT jsonb_agg(t) FROM (%s) t', pg_sql)
+      INTO result;
+    RETURN COALESCE(result, '[]'::JSONB);
+  ELSIF pg_sql ~* '\mRETURNING\M' THEN
+    -- DML with RETURNING: must use CTE (INSERT/UPDATE/DELETE cannot be FROM subqueries)
+    EXECUTE format('WITH t AS (%s) SELECT jsonb_agg(t) FROM t', pg_sql)
       INTO result;
     RETURN COALESCE(result, '[]'::JSONB);
   ELSE

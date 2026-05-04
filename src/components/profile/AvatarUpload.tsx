@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Camera, Upload, X, Loader2 } from 'lucide-react';
 import { resizeImage } from '@/lib/image';
 
@@ -18,6 +18,12 @@ export default function AvatarUpload({ memberId, currentVersion, currentUrl, onU
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!uploading) {
+      setPreview(currentUrl ? `${currentUrl}?v=${currentVersion}` : null);
+    }
+  }, [currentUrl, currentVersion, uploading]);
 
   const handleFile = useCallback(async (file: File) => {
     setError(null);
