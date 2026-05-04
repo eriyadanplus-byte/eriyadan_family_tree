@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSession } from '@/lib/auth';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { verifyAnonHelpToken, hashAnonToken, HELP_ANON_COOKIE } from '@/lib/helpToken';
 import { canAccessThread, type HelpThread } from '@/lib/help/permissions';
 import { SendMessageSchema } from '@/lib/help/schemas';
@@ -25,8 +25,8 @@ function isRateLimited(key: string): boolean {
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const threadId = parseInt(id);
-  if (isNaN(threadId)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  const threadId = id;
+  if (!threadId) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
   const rows = await query(
     `SELECT id, user_id, anon_token_hash, status, assigned_handler_id FROM help_threads WHERE id = ?`,
@@ -42,11 +42,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const session = await getSession();
   let senderKind: 'user' | 'anon' | 'admin' | 'editor' = 'anon';
-  let senderUserId: number | null = null;
+  let senderUserId: string | null = null;
   let authorized = false;
 
   if (session) {
-    senderUserId = parseInt(session.id);
+    senderUserId = session.id;
     senderKind = session.role === 'super_admin' ? 'admin' : 'editor';
     authorized = await canAccessThread(session, thread);
     // The owning user can also reply

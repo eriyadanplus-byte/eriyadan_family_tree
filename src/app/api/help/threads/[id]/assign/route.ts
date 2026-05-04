@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { AssignHandlerSchema } from '@/lib/help/schemas';
 import bus from '@/lib/help/bus';
 
@@ -12,8 +12,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (session.role !== 'super_admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const threadId = parseInt(id);
-  if (isNaN(threadId)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  const threadId = id;
+  if (!threadId) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
   const body = await request.json().catch(() => null);
   const parsed = AssignHandlerSchema.safeParse(body);

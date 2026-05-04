@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { GrantSchema } from '@/lib/help/schemas';
 
 export const dynamic = 'force-dynamic';
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
   const result = await query(
     `INSERT INTO messaging_handler_grants (editor_user_id, granted_by_admin_id) VALUES (?, ?)`,
-    [editor_user_id, parseInt(session.id)]
+    [editor_user_id, session.id]
   ) as any;
 
   return NextResponse.json({ id: result.insertId }, { status: 201 });

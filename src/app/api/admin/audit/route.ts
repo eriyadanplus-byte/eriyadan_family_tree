@@ -7,6 +7,6 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     await requireRole(['super_admin', 'editor']);
-    return NextResponse.json(getAuditLog());
+    return NextResponse.json(await getAuditLog());
   } catch { return NextResponse.json({ error: 'Unauthorised' }, { status: 403 }); }
 }

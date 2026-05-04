@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
 import { findStubMatch, claimStub, getSpouse } from '@/lib/family';
 import { hashAnonToken, HELP_ANON_COOKIE } from '@/lib/helpToken';
 import { rateLimit } from '@/lib/rate-limit';
 
-async function linkAnonThread(request: NextRequest, userId: number) {
+async function linkAnonThread(request: NextRequest, userId: string) {
   const anonToken = request.cookies.get(HELP_ANON_COOKIE)?.value;
   if (!anonToken) return;
   const hash = hashAnonToken(anonToken);

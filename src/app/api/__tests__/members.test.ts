@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@/lib/mysql-db', () => ({
+vi.mock('@/lib/db', () => ({
   query: vi.fn(),
   initDB: vi.fn().mockResolvedValue(undefined),
   getConnection: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock('@/lib/auth', () => ({
 
 import { GET } from '../members/route';
 import { NextRequest } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 
 const mockQuery = vi.mocked(query);
 

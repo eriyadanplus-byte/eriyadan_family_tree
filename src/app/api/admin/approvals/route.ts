@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { getSession, requireRole } from '@/lib/auth';
 import { descendantIds } from '@/lib/family';
 
@@ -102,22 +102,21 @@ export async function POST(request: NextRequest) {
         ? (await query('SELECT * FROM members WHERE id = ? AND deleted_at IS NULL', [primaryAncestorId]) as any[])[0]
         : null;
 
-      const nextId = (await query('SELECT AUTO_INCREMENT as id FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "members"') as any[])[0]?.id || Date.now();
-
       if (relationType === 'spouse') {
         // ─── Spouse path: same generation, no parent IDs, link via spouses table ───
         const spouseGen = ancestor ? ancestor.generation : 1;
-        await query(
-          'INSERT INTO members (id, full_name, mobile_number, email, generation, father_id, mother_id, is_late, role, created_by) VALUES (?, ?, ?, ?, ?, NULL, NULL, false, ?, ?)',
-          [nextId, user.name || user.email, user.mobile_number || '', user.email,
+        const spouseResult = await query(
+          'INSERT INTO members (full_name, mobile_number, email, generation, father_id, mother_id, is_late, "role", created_by) VALUES (?, ?, ?, ?, NULL, NULL, false, ?, ?)',
+          [user.name || user.email, user.mobile_number || '', user.email,
            spouseGen, assignedRole, session.id]
-        );
+        ) as any;
+        const newMemberId = String(spouseResult.insertId);
         // Link as spouse via spouses table
         if (primaryAncestorId) {
           const { setSpouse } = await import('@/lib/family');
-          await setSpouse(String(nextId), primaryAncestorId);
+          await setSpouse(newMemberId, primaryAncestorId);
         }
-        await query('UPDATE users SET status = ?, role = ?, member_id = ? WHERE id = ?', ['active', assignedRole, nextId, userId]);
+        await query('UPDATE users SET status = ?, role = ?, member_id = ? WHERE id = ?', ['active', assignedRole, newMemberId, userId]);
         return NextResponse.json({ success: true, message: 'Spouse approved and linked to family tree' });
       }
 
@@ -126,12 +125,12 @@ export async function POST(request: NextRequest) {
         const sibGen = ancestor ? ancestor.generation : 1;
         const sibFatherId = ancestor?.father_id ? String(ancestor.father_id) : null;
         const sibMotherId = ancestor?.mother_id ? String(ancestor.mother_id) : null;
-        await query(
-          'INSERT INTO members (id, full_name, mobile_number, email, generation, father_id, mother_id, is_late, role, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, false, ?, ?)',
-          [nextId, user.name || user.email, user.mobile_number || '', user.email,
+        const sibResult = await query(
+          'INSERT INTO members (full_name, mobile_number, email, generation, father_id, mother_id, is_late, "role", created_by) VALUES (?, ?, ?, ?, ?, ?, false, ?, ?)',
+          [user.name || user.email, user.mobile_number || '', user.email,
            sibGen, sibFatherId, sibMotherId, assignedRole, session.id]
-        );
-        await query('UPDATE users SET status = ?, role = ?, member_id = ? WHERE id = ?', ['active', assignedRole, nextId, userId]);
+        ) as any;
+        await query('UPDATE users SET status = ?, role = ?, member_id = ? WHERE id = ?', ['active', assignedRole, String(sibResult.insertId), userId]);
         return NextResponse.json({ success: true, message: 'Sibling approved and added to the family tree' });
       }
 
@@ -164,12 +163,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      await query(
-        'INSERT INTO members (id, full_name, mobile_number, email, generation, father_id, mother_id, is_late, role, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, false, ?, ?)',
-        [nextId, user.name || user.email, user.mobile_number || '', user.email,
+      const childResult = await query(
+        'INSERT INTO members (full_name, mobile_number, email, generation, father_id, mother_id, is_late, "role", created_by) VALUES (?, ?, ?, ?, ?, ?, false, ?, ?)',
+        [user.name || user.email, user.mobile_number || '', user.email,
          ancestor ? ancestor.generation + 1 : 1, fatherId, motherId, assignedRole, session.id]
-      );
-      await query('UPDATE users SET status = ?, role = ?, member_id = ? WHERE id = ?', ['active', assignedRole, nextId, userId]);
+      ) as any;
+      await query('UPDATE users SET status = ?, role = ?, member_id = ? WHERE id = ?', ['active', assignedRole, String(childResult.insertId), userId]);
       return NextResponse.json({ success: true, message: 'Member approved and added to the family tree' });
     }
 

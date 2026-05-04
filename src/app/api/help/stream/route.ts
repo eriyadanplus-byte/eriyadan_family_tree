@@ -12,12 +12,12 @@ export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
 
   // Identify caller
-  let userId: number | null = null;
+  let userId: string | null = null;
   let anonTokenHash: string | null = null;
   let isHandler = false;
 
   if (session) {
-    userId = parseInt(session.id);
+    userId = session.id;
     isHandler = await canViewHandlerInbox(session);
   } else {
     const anonCookie = cookieStore.get(HELP_ANON_COOKIE);
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       const listener = (event: BusEvent) => {
         // Grant revocation: close stream for the affected editor
         if (event.kind === 'grant_revoked') {
-          if (session && parseInt(session.id) === event.editorUserId) {
+          if (session && session.id === event.editorUserId) {
             send({ kind: 'grant_revoked' });
             clearInterval(heartbeat);
             bus.offMessage(listener);

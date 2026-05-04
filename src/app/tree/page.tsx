@@ -85,6 +85,14 @@ function TreePageContent({ focusId }: { focusId: string | null }) {
   useEffect(() => {
     fetchSession();
     fetchMembers();
+
+    // Presence heartbeat: update last_seen every 5 minutes
+    const heartbeat = () => {
+      fetch('/api/presence', { method: 'POST' }).catch(() => {});
+    };
+    heartbeat();
+    const interval = setInterval(heartbeat, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchSession = async () => {

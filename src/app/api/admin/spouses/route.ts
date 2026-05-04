@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { requireRole } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -20,9 +20,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'One or both members not found' }, { status: 400 });
     }
 
-    // Insert into spouses table (ensure consistent ordering)
-    const a = Math.min(parseInt(memberAId), parseInt(memberBId));
-    const b = Math.max(parseInt(memberAId), parseInt(memberBId));
+    // Insert into spouses table (ensure consistent ordering for UUID constraint)
+    const a = memberAId < memberBId ? memberAId : memberBId;
+    const b = memberAId < memberBId ? memberBId : memberAId;
 
     await query(
       'INSERT INTO spouses (member_a_id, member_b_id, status, created_by) VALUES (?, ?, ?, ?)',

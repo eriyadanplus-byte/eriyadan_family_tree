@@ -15,7 +15,7 @@ interface Message {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  triggerStage: 'signup_start' | 'signup_final_no_match';
+  triggerStage: 'signup_start' | 'signup_final_no_match' | 'login_help';
   contextSnapshot?: Record<string, unknown>;
 }
 
@@ -25,6 +25,13 @@ export default function HelpComposer({ isOpen, onClose, triggerStage, contextSna
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+
+  // Structured form for login_help
+  const isLoginHelp = triggerStage === 'login_help';
+  const [formName, setFormName] = useState('');
+  const [formWhatsApp, setFormWhatsApp] = useState('');
+  const [formLocation, setFormLocation] = useState('');
+  const [formAncestors, setFormAncestors] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<number | null>(null);
 
@@ -52,16 +59,30 @@ export default function HelpComposer({ isOpen, onClose, triggerStage, contextSna
   const sendMessage = async () => {
     const trimmed = body.trim();
     if (!trimmed) return;
+    if (isLoginHelp && (!formName.trim() || !formWhatsApp.trim())) {
+      setError('Name and WhatsApp number are required.');
+      return;
+    }
     setError('');
     setSending(true);
 
     try {
+      const snapshot = isLoginHelp
+        ? {
+            ...(contextSnapshot || {}),
+            name: formName.trim(),
+            whatsapp: formWhatsApp.trim(),
+            location: formLocation.trim(),
+            ancestors: formAncestors.trim(),
+          }
+        : contextSnapshot;
+
       if (!threadId) {
         // Create thread + first message
         const res = await fetch('/api/help/threads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trigger_stage: triggerStage, body: trimmed, context_snapshot: contextSnapshot }),
+          body: JSON.stringify({ trigger_stage: triggerStage, body: trimmed, context_snapshot: snapshot }),
         });
         if (!res.ok) {
           const data = await res.json();
@@ -128,6 +149,8 @@ export default function HelpComposer({ isOpen, onClose, triggerStage, contextSna
             <p className="text-sm leading-relaxed" style={{ color: 'rgba(232,245,233,0.60)' }}>
               {triggerStage === 'signup_final_no_match'
                 ? "Can't find your ancestor in the tree? Tell the admin who you are and who your relatives are — they'll help place you correctly."
+                : triggerStage === 'login_help'
+                ? "Need help signing in? Fill in your details below and the admin will assist you."
                 : "Not sure where to start? Tell the admin who you are, who your ancestors are, and any details that might help identify your family lineage."}
             </p>
           </div>
@@ -178,10 +201,58 @@ export default function HelpComposer({ isOpen, onClose, triggerStage, contextSna
         {/* Compose */}
         {!messages.length || threadId ? (
           <div className="px-4 pt-2 pb-4 space-y-2">
+            {isLoginHelp && !threadId && (
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(232,245,233,0.45)' }}>Name *</label>
+                  <input
+                    type="text"
+                    className="glass-input w-full text-sm h-9"
+                    placeholder="Your full name"
+                    value={formName}
+                    onChange={e => setFormName(e.target.value)}
+                    disabled={sending}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(232,245,233,0.45)' }}>WhatsApp Number *</label>
+                  <input
+                    type="tel"
+                    className="glass-input w-full text-sm h-9"
+                    placeholder="+91 98765 43210"
+                    value={formWhatsApp}
+                    onChange={e => setFormWhatsApp(e.target.value)}
+                    disabled={sending}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(232,245,233,0.45)' }}>Location</label>
+                  <input
+                    type="text"
+                    className="glass-input w-full text-sm h-9"
+                    placeholder="City, Country"
+                    value={formLocation}
+                    onChange={e => setFormLocation(e.target.value)}
+                    disabled={sending}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(232,245,233,0.45)' }}>Ancestors / Known Relatives</label>
+                  <textarea
+                    className="glass-input w-full text-sm resize-none"
+                    rows={2}
+                    placeholder="Who are your known family members in the tree?"
+                    value={formAncestors}
+                    onChange={e => setFormAncestors(e.target.value)}
+                    disabled={sending}
+                  />
+                </div>
+              </div>
+            )}
             <textarea
               className="glass-input w-full text-sm resize-none"
               rows={3}
-              placeholder={threadId ? 'Type a message…' : 'Describe who you are and who your ancestors are…'}
+              placeholder={threadId ? 'Type a message…' : isLoginHelp ? 'What do you need help with?' : 'Describe who you are and who your ancestors are…'}
               value={body}
               onChange={e => setBody(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendMessage(); }}
@@ -189,7 +260,7 @@ export default function HelpComposer({ isOpen, onClose, triggerStage, contextSna
             />
             <button
               onClick={sendMessage}
-              disabled={sending || !body.trim()}
+              disabled={sending || !body.trim() || (isLoginHelp && !threadId && (!formName.trim() || !formWhatsApp.trim()))}
               className="w-full h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #4CAF72, #2E7D32)', color: '#fff' }}
             >

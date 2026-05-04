@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +51,12 @@ export async function GET(request: NextRequest) {
       const wifeId      = memberIsHusband ? (r.spouse_id ? String(r.spouse_id) : null) : String(r.id);
       const husbandName = memberIsHusband ? r.full_name : r.spouse_name;
       const wifeName    = memberIsHusband ? r.spouse_name : r.full_name;
+      const husbandPhoto = memberIsHusband
+        ? (r.profile_photo_url ? `/avatars/${r.id}.jpg?v=${r.avatar_version || 0}` : null)
+        : (r.spouse_photo ? `/avatars/${r.spouse_id}.jpg?v=${r.spouse_avatar_version || 0}` : null);
+      const wifePhoto = memberIsHusband
+        ? (r.spouse_photo ? `/avatars/${r.spouse_id}.jpg?v=${r.spouse_avatar_version || 0}` : null)
+        : (r.profile_photo_url ? `/avatars/${r.id}.jpg?v=${r.avatar_version || 0}` : null);
 
       return {
         id: String(r.id),
@@ -76,6 +82,8 @@ export async function GET(request: NextRequest) {
         wifeId,
         husbandName,
         wifeName,
+        husbandPhoto,
+        wifePhoto,
       };
     });
 

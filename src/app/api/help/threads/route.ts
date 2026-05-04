@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSession } from '@/lib/auth';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { verifyAnonHelpToken, hashAnonToken, issueAnonHelpToken, HELP_ANON_COOKIE } from '@/lib/helpToken';
 import { canViewHandlerInbox } from '@/lib/help/permissions';
 import { CreateThreadSchema } from '@/lib/help/schemas';
@@ -37,13 +37,13 @@ export async function POST(request: NextRequest) {
 
   // Identify caller: logged-in user OR anon cookie
   const session = await getSession();
-  let userId: number | null = null;
+  let userId: string | null = null;
   let anonTokenHash: string | null = null;
   let senderKind: 'user' | 'anon' = 'anon';
   let newAnonToken: string | null = null;
 
   if (session) {
-    userId = parseInt(session.id);
+    userId = session.id;
     senderKind = 'user';
   } else {
     const cookieStore = await cookies();
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     existingThread = rows[0] ?? null;
   }
 
-  let threadId: number;
+  let threadId: string;
   if (existingThread) {
     threadId = existingThread.id;
   } else {
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         ancestor_name ?? null, place ?? null, contact_number ?? null, whatsapp_number ?? null,
       ]
     ) as any;
-    threadId = result.insertId;
+    threadId = String(result.insertId);
   }
 
   // Insert the first message
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
   }
   if (assignedToMe) {
     conditions.push('ht.assigned_handler_id = ?');
-    values.push(parseInt(session.id));
+    values.push(session.id);
   }
 
   const threads = await query(

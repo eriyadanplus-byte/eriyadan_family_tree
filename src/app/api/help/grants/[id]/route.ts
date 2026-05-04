@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import bus from '@/lib/help/bus';
 
 export const dynamic = 'force-dynamic';
@@ -11,8 +11,8 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (session.role !== 'super_admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const grantId = parseInt(id);
-  if (isNaN(grantId)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  const grantId = id;
+  if (!grantId) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
   const grants = await query(
     `SELECT id, editor_user_id, revoked_at FROM messaging_handler_grants WHERE id = ?`,

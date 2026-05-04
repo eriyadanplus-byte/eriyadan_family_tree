@@ -29,6 +29,8 @@ interface AncestorResult {
   wifeId?: string | null;
   husbandName?: string | null;
   wifeName?: string | null;
+  husbandPhoto?: string | null;
+  wifePhoto?: string | null;
 }
 
 /* ── Step dot ─────────────────────────────────────── */
@@ -106,14 +108,22 @@ function AncestorSearch({ value, onChange, onNoMatch }: {
         <div className="flex items-center gap-3 min-w-0">
           {isCouple ? (
             <div className="flex -space-x-2 flex-shrink-0">
-              <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
-                style={{ background: 'rgba(76,175,114,0.15)', color: '#81C784' }}>
-                {(v.husbandName || v.fullName)[0].toUpperCase()}
-              </div>
-              <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
-                style={{ background: 'rgba(200,150,46,0.15)', color: '#E6B84A' }}>
-                {(v.wifeName || v.spouseName || '?')[0].toUpperCase()}
-              </div>
+              {v.husbandPhoto ? (
+                <img src={v.husbandPhoto} alt={v.husbandName || v.fullName} className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
+                  style={{ background: 'rgba(76,175,114,0.15)', color: '#81C784' }}>
+                  {(v.husbandName || v.fullName)[0].toUpperCase()}
+                </div>
+              )}
+              {v.wifePhoto ? (
+                <img src={v.wifePhoto} alt={v.wifeName || v.spouseName || ''} className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
+                  style={{ background: 'rgba(200,150,46,0.15)', color: '#E6B84A' }}>
+                  {(v.wifeName || v.spouseName || '?')[0].toUpperCase()}
+                </div>
+              )}
             </div>
           ) : v.photo ? (
             <img src={v.photo} alt={v.fullName} className="w-10 h-10 rounded-full object-cover border border-white/10 flex-shrink-0" />
@@ -193,17 +203,25 @@ function AncestorSearch({ value, onChange, onNoMatch }: {
                 onClick={() => { onChange(m); setOpen(false); setQuery(''); }}
                 className="w-full text-left px-4 py-3 transition-colors hover:bg-white/5 flex items-center gap-3"
                 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                {/* Couple: overlapping initials; singleton: photo or initial */}
+                {/* Couple: overlapping photos/initials; singleton: photo or initial */}
                 {isCouple ? (
                   <div className="flex -space-x-2 flex-shrink-0">
-                    <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
-                      style={{ background: 'rgba(76,175,114,0.15)', color: '#81C784' }}>
-                      {(m.husbandName || m.fullName)[0].toUpperCase()}
-                    </div>
-                    <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
-                      style={{ background: 'rgba(200,150,46,0.15)', color: '#E6B84A' }}>
-                      {(m.wifeName || m.spouseName || '?')[0].toUpperCase()}
-                    </div>
+                    {m.husbandPhoto ? (
+                      <img src={m.husbandPhoto} alt={m.husbandName || m.fullName} className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
+                        style={{ background: 'rgba(76,175,114,0.15)', color: '#81C784' }}>
+                        {(m.husbandName || m.fullName)[0].toUpperCase()}
+                      </div>
+                    )}
+                    {m.wifePhoto ? (
+                      <img src={m.wifePhoto} alt={m.wifeName || m.spouseName || ''} className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
+                        style={{ background: 'rgba(200,150,46,0.15)', color: '#E6B84A' }}>
+                        {(m.wifeName || m.spouseName || '?')[0].toUpperCase()}
+                      </div>
+                    )}
                   </div>
                 ) : m.photo ? (
                   <img src={m.photo} alt={m.fullName} className="w-9 h-9 rounded-full flex-shrink-0 object-cover border border-white/10" />

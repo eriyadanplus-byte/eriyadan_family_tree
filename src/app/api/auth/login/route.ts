@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { createToken, verifyPassword, hashPassword } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 
@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
 
     const isValid = user.password === password || await verifyPassword(password, user.password).catch(() => false);
     if (!isValid) return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+
+    // Update last_seen so user appears online immediately
+    await query('UPDATE users SET last_seen = NOW() WHERE id = ?', [user.id]);
 
     const memberIdStr = user.member_id != null ? String(user.member_id) : null;
     const token = createToken({ id: String(user.id), email: user.email, role: user.role, memberId: memberIdStr, canApprove: !!user.can_approve });

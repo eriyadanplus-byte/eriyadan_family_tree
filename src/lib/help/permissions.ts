@@ -1,10 +1,10 @@
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import type { SessionUser } from '@/lib/auth';
 
 export interface HelpThread {
-  id: number;
-  assigned_handler_id: number | null;
-  user_id: number | null;
+  id: string;
+  assigned_handler_id: string | null;
+  user_id: string | null;
   anon_token_hash: string | null;
   status: 'open' | 'pending_admin' | 'resolved';
 }

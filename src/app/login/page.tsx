@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { TreeDeciduous, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
+import { TreeDeciduous, Eye, EyeOff, AlertCircle, Loader2, MessageCircle } from 'lucide-react';
+import HelpComposer from '@/components/help/HelpComposer';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [showPw, setShowPw]     = useState(false);
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +105,24 @@ export default function LoginPage() {
           <a href="/" className="text-sm hover:underline" style={{ color: 'rgba(232,245,233,0.25)' }}>← Back to Home</a>
         </p>
       </div>
+
+      {/* Need Help? floating button */}
+      <button
+        type="button"
+        onClick={() => setShowHelp(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl transition-all hover:scale-105"
+        style={{ background: 'rgba(13,31,13,0.96)', border: '1px solid rgba(76,175,114,0.30)', color: '#81C784', backdropFilter: 'blur(12px)' }}
+        title="Need help? Talk to admin"
+      >
+        <MessageCircle className="w-4 h-4" />
+        <span className="text-xs font-semibold">Need help?</span>
+      </button>
+
+      <HelpComposer
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+        triggerStage="login_help"
+      />
     </div>
   );
 }

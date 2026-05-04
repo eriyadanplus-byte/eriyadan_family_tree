@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       `SELECT m.id, m.full_name, m.generation, m.is_late, m.is_stub, m.gender,
               m.profile_photo_url, m.avatar_version, m.father_id, m.mother_id,
               m.mobile_number, m.email, m.location, m.dob,
-              CASE WHEN u.last_seen > NOW() - INTERVAL 10 MINUTE THEN 1 ELSE 0 END as is_online
+              CASE WHEN u.last_seen > NOW() - INTERVAL '10 minutes' THEN 1 ELSE 0 END as is_online
        FROM members m
        LEFT JOIN users u ON u.member_id = m.id
        WHERE m.deleted_at IS NULL${genFilter}

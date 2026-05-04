@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { getSession, rolePermissions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
   }
   if (isLate !== null && isLate !== '') {
     conditions.push('m.is_late = ?');
-    values.push(isLate === 'true' ? 1 : 0);
+    values.push(isLate === 'true');
   }
   if (search) {
     conditions.push('(LOWER(m.full_name) LIKE ? OR m.mobile_number LIKE ? OR LOWER(m.email) LIKE ?)');
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
   }
 
   const sql = `SELECT m.*, 
-    CASE WHEN u.last_seen > NOW() - INTERVAL 10 MINUTE THEN 1 ELSE 0 END as is_online
+    CASE WHEN u.last_seen > NOW() - INTERVAL '10 minutes' THEN 1 ELSE 0 END as is_online
     FROM members m
     LEFT JOIN users u ON u.member_id = m.id
     WHERE ${conditions.join(' AND ')} ORDER BY m.generation ASC, m.full_name ASC LIMIT ${limit}`;
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     const result = await query(
       `INSERT INTO members (
         full_name, mobile_number, email, location, bio,
-        gender, dob, current_role, company,
+        gender, dob, "current_role", company,
         dod, is_late, generation,
         father_id, mother_id, spouse_id,
         is_stub, created_by, added_by_member_id,
@@ -145,9 +145,9 @@ export async function POST(request: NextRequest) {
       [
         fullName, mobileNumber, email || null, location || null, bio || null,
         gender || null, dob || null, current_role || null, company || null,
-        dod || null, isLate ? 1 :0, generation || 1,
+        dod || null, !!isLate, generation || 1,
         fatherId || null, motherId || null, spouseId || null,
-        isStub ? 1 :0, session.id,
+        !!isStub, session.id,
         addedByMemberId || null,
         createdVia || null,
       ]

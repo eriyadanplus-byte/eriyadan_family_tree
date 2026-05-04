@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { canAccessThread, type HelpThread } from '@/lib/help/permissions';
 import bus from '@/lib/help/bus';
 
@@ -11,8 +11,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const threadId = parseInt(id);
-  if (isNaN(threadId)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  const threadId = id;
+  if (!threadId) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
   const rows = await query(
     `SELECT id, user_id, anon_token_hash, status, assigned_handler_id FROM help_threads WHERE id = ?`,

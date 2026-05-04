@@ -1,10 +1,10 @@
 import { EventEmitter } from 'events';
 
 export type BusEvent =
-  | { kind: 'message'; threadId: number; payload: object }
-  | { kind: 'thread_updated'; threadId: number; payload: object }
-  | { kind: 'new_thread'; threadId: number; payload: object }
-  | { kind: 'grant_revoked'; editorUserId: number };
+  | { kind: 'message'; threadId: string; payload: object }
+  | { kind: 'thread_updated'; threadId: string; payload: object }
+  | { kind: 'new_thread'; threadId: string; payload: object }
+  | { kind: 'grant_revoked'; editorUserId: string };
 
 // Single-process in-memory pub/sub.
 // When migrating to Cloudflare Workers: replace with Durable Objects or a queue.

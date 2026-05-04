@@ -26,9 +26,14 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [memberId, setMemberId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
+    fetch('/api/auth/session')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setMemberId(d?.user?.memberId ?? null))
+      .catch(() => {});
   }, []);
 
   const fetchStats = async () => {
@@ -98,6 +103,24 @@ export default function AdminPage() {
             </Link>
           </div>
         </header>
+
+        {/* Unlinked admin info card */}
+        {memberId === null && (
+          <div className="mb-8 p-6 glass rounded-2xl border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <TreeDeciduous className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Not Yet Linked to Family Tree</p>
+                <p className="text-xs text-white/40">All admin features are available. Connect your lineage any time via the Members panel.</p>
+              </div>
+            </div>
+            <Link href="/admin/founding" className="px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 transition-all">
+              Generation Seed
+            </Link>
+          </div>
+        )}
 
         {/* Empty tree CTA */}
         {(stats?.totalMembers ?? 0) === 0 && (
@@ -290,20 +313,22 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Edit My Lineage — super_admin only */}
-            <Link
-              href="/admin/lineage"
-              className="flex items-center gap-4 p-5 rounded-2xl glass border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors"
-            >
-              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                <GitBranch className="w-5 h-5 text-purple-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white">Edit My Lineage</p>
-                <p className="text-xs text-white/40">Set your generation, parents &amp; spouse in the tree</p>
-              </div>
-              <ArrowRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
-            </Link>
+            {/* Edit My Lineage — super_admin only, hidden until linked */}
+            {memberId !== null && (
+              <Link
+                href="/admin/lineage"
+                className="flex items-center gap-4 p-5 rounded-2xl glass border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                  <GitBranch className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white">Edit My Lineage</p>
+                  <p className="text-xs text-white/40">Set your generation, parents &amp; spouse in the tree</p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
+              </Link>
+            )}
 
             {/* Quick Help */}
             <div className="p-6 rounded-2xl bg-surface-container border border-white/5">

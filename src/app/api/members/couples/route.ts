@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';

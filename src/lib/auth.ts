@@ -14,6 +14,14 @@ export interface SessionUser {
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const SALT_ROUNDS = 10;
 
+// Production guard: prevent accidental use of the default dev secret
+if (JWT_SECRET === 'dev-secret-change-in-production' && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'FATAL: JWT_SECRET is set to the insecure default value in production. ' +
+    'Set a strong random JWT_SECRET environment variable before starting the server.'
+  );
+}
+
 // Role permissions
 export const rolePermissions = {
   super_admin: {

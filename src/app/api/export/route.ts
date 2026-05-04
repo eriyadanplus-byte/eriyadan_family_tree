@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { getSession, rolePermissions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';

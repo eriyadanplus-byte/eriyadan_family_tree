@@ -145,7 +145,7 @@ export default function AppHeader({
   const navLinks = [
     { href: "/tree", label: "Family Tree" },
     { href: "/search", label: "Search" },
-    { href: "/profile", label: "My Profile" },
+    ...(session?.memberId ? [{ href: "/profile", label: "My Profile" }] : []),
   ];
 
   return (
@@ -241,18 +241,32 @@ export default function AppHeader({
 
         {session ? (
           <div className="flex items-center gap-1.5">
-            <Link
-              href="/profile"
-              className="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold uppercase transition-colors"
-              style={{
-                background: "rgba(76,175,114,0.12)",
-                borderColor: "rgba(76,175,114,0.25)",
-                color: "#81C784",
-              }}
-              title={session.name || session.email}
-            >
-              {(session.name || session.email).charAt(0)}
-            </Link>
+            {session.memberId ? (
+              <Link
+                href="/profile"
+                className="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold uppercase transition-colors"
+                style={{
+                  background: "rgba(76,175,114,0.12)",
+                  borderColor: "rgba(76,175,114,0.25)",
+                  color: "#81C784",
+                }}
+                title={session.name || session.email}
+              >
+                {(session.name || session.email).charAt(0)}
+              </Link>
+            ) : (
+              <div
+                className="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold uppercase"
+                style={{
+                  background: "rgba(200,150,46,0.12)",
+                  borderColor: "rgba(200,150,46,0.25)",
+                  color: "#E6B84A",
+                }}
+                title="Not linked to a family profile yet"
+              >
+                {(session.name || session.email).charAt(0)}
+              </div>
+            )}
             <button
               onClick={handleLogout}
               className="hidden md:flex p-2 rounded-xl hover:bg-white/10 transition-colors"

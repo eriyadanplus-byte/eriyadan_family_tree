@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { requireRole } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -15,8 +15,8 @@ async function getSetting(key: string, defaultValue: string): Promise<string> {
 
 async function setSetting(key: string, value: string) {
   await query(
-    'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
-    [key, value, value]
+    'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value',
+    [key, value]
   );
 }
 

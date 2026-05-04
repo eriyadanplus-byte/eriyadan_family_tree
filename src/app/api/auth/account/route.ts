@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 import { getSession, hashPassword } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -23,7 +23,7 @@ export async function PATCH(request: NextRequest) {
   }
   if (newPassword) {
     const hashed = await hashPassword(newPassword);
-    updates.push('password_hash = ?');
+    updates.push('"password" = ?');
     values.push(hashed);
   }
 

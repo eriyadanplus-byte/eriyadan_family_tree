@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@/lib/mysql-db', () => ({
+vi.mock('@/lib/db', () => ({
   query: vi.fn(),
   initDB: vi.fn().mockResolvedValue(undefined),
   getConnection: vi.fn(),
@@ -9,7 +9,7 @@ vi.mock('@/lib/mysql-db', () => ({
 
 import { canViewHandlerInbox, canAccessThread, type HelpThread } from '../help/permissions';
 import type { SessionUser } from '../auth';
-import { query } from '@/lib/mysql-db';
+import { query } from '@/lib/db';
 
 const mockQuery = vi.mocked(query);
 
@@ -17,8 +17,8 @@ const adminUser: SessionUser = { id: '1', email: 'admin@test.com', role: 'super_
 const editorUser: SessionUser = { id: '2', email: 'editor@test.com', role: 'editor', memberId: null };
 const viewerUser: SessionUser = { id: '3', email: 'viewer@test.com', role: 'viewer', memberId: null };
 
-const thread: HelpThread = { id: 10, assigned_handler_id: null, user_id: 99, anon_token_hash: null, status: 'open' };
-const threadAssignedToEditor: HelpThread = { ...thread, assigned_handler_id: 2 };
+const thread: HelpThread = { id: '10', assigned_handler_id: null, user_id: '99', anon_token_hash: null, status: 'open' };
+const threadAssignedToEditor: HelpThread = { ...thread, assigned_handler_id: '2' };
 
 beforeEach(() => mockQuery.mockReset());
 
@@ -62,7 +62,7 @@ describe('canAccessThread', () => {
 
   it('editor without global grant cannot access thread not assigned to them', async () => {
     mockQuery.mockResolvedValueOnce([] as any); // no global grant
-    const otherThread: HelpThread = { ...thread, assigned_handler_id: 999 };
+    const otherThread: HelpThread = { ...thread, assigned_handler_id: '999' };
     expect(await canAccessThread(editorUser, otherThread)).toBe(false);
   });
 

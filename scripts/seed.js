@@ -1,3 +1,6 @@
+// ⚠️  DEV-ONLY: This script creates demo family members + 3 demo users.
+// For production fresh deploys, use `scripts/bootstrap-admin.js` instead.
+
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 

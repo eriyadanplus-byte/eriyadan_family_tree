@@ -1,4 +1,4 @@
-import { query } from './mysql-db';
+import { query } from './db';
 
 // ─── Types ─────────────────────────────────────────────
 
@@ -34,11 +34,11 @@ export async function setSpouse(
   status: 'current' | 'former' | 'late' = 'current',
   createdBy?: string
 ) {
-  const a = Math.min(parseInt(aId), parseInt(bId));
-  const b = Math.max(parseInt(aId), parseInt(bId));
+  const a = aId < bId ? aId : bId;
+  const b = aId < bId ? bId : aId;
   await query(
     `INSERT INTO spouses (member_a_id, member_b_id, status, created_by) VALUES (?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE status = VALUES(status), updated_at = NOW()`,
+     ON CONFLICT (member_a_id, member_b_id) DO UPDATE SET status = EXCLUDED.status, updated_at = NOW()`,
     [a, b, status, createdBy || 'system']
   );
 }
