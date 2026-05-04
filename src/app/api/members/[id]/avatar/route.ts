@@ -68,12 +68,17 @@ export async function POST(
   const photoUrl = publicUrlData.publicUrl;
 
   // Bump avatar_version and set profile_photo_url
-  await query(
-    `UPDATE members SET avatar_version = avatar_version + 1, profile_photo_url = ? WHERE id = ?`,
-    [photoUrl, id]
-  );
+  try {
+    await query(
+      `UPDATE members SET "avatar_version" = "avatar_version" + 1, "profile_photo_url" = ? WHERE id = ?`,
+      [photoUrl, id]
+    );
+  } catch (err: any) {
+    console.error('Avatar update error:', err.message);
+    return NextResponse.json({ error: 'Failed to update avatar metadata', detail: err.message }, { status: 500 });
+  }
 
-  const updated = (await query('SELECT avatar_version FROM members WHERE id = ?', [id])) as any[];
+  const updated = (await query('SELECT "avatar_version" FROM members WHERE id = ?', [id])) as any[];
   const avatarVersion = updated[0]?.avatar_version || 1;
 
   return NextResponse.json({

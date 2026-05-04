@@ -8,12 +8,42 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE OR REPLACE FUNCTION run_sql(_sql TEXT, _params JSONB DEFAULT '[]')
 RETURNS JSONB AS $$
 DECLARE
-  result JSONB;
+  result     JSONB;
+  pg_sql     TEXT := _sql;
+  n          INT  := jsonb_array_length(_params);
+  i          INT;
+  v          JSONB;
+  first_word TEXT;
 BEGIN
-  -- Use format() for parameterized queries to prevent SQL injection
-  EXECUTE format('SELECT jsonb_agg(t) FROM (%s) t', _sql)
-    INTO result;
-  RETURN COALESCE(result, '[]'::JSONB);
+  -- Replace each ? placeholder with the corresponding quoted/typed literal
+  FOR i IN 0..(n - 1) LOOP
+    v := _params->i;
+    IF v IS NULL OR v = 'null'::jsonb THEN
+      pg_sql := regexp_replace(pg_sql, '[?]', 'NULL', '');
+    ELSIF jsonb_typeof(v) = 'boolean' THEN
+      pg_sql := regexp_replace(pg_sql, '[?]',
+        CASE WHEN (v::text = 'true') THEN 'TRUE' ELSE 'FALSE' END, '');
+    ELSIF jsonb_typeof(v) = 'number' THEN
+      pg_sql := regexp_replace(pg_sql, '[?]', (v #>> '{}'), '');
+    ELSE
+      pg_sql := regexp_replace(pg_sql, '[?]', quote_literal(v #>> '{}'), '');
+    END IF;
+  END LOOP;
+
+  -- Identify statement type
+  first_word := upper(split_part(
+    regexp_replace(btrim(pg_sql), '\s+', ' ', 'g'), ' ', 1));
+
+  -- SELECT or any DML with RETURNING → return rows as JSONB array
+  IF first_word = 'SELECT' OR pg_sql ~* '\mRETURNING\M' THEN
+    EXECUTE format('SELECT jsonb_agg(t) FROM (%s) t', pg_sql)
+      INTO result;
+    RETURN COALESCE(result, '[]'::JSONB);
+  ELSE
+    -- Plain DML (INSERT/UPDATE/DELETE without RETURNING)
+    EXECUTE pg_sql;
+    RETURN '[]'::JSONB;
+  END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

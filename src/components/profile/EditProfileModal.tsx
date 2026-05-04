@@ -17,7 +17,7 @@ interface Member {
   dob?: string;
   dod?: string;
   location?: string;
-  current_role?: string;
+  currentRole?: string;
   company?: string;
   instagram?: string;
   linkedin?: string;
@@ -133,7 +133,7 @@ export default function EditProfileModal({ member, currentUserRole, onClose, onS
             </div>
             <div className="space-y-2">
               <label className="text-xs text-white/40">PROFESSION</label>
-              <input type="text" value={form.current_role || ''} onChange={e => update('current_role', e.target.value)}
+              <input type="text" value={form.currentRole || ''} onChange={e => update('currentRole', e.target.value)}
                 className="w-full h-10 rounded-xl glass-input px-4 text-white text-sm" />
             </div>
             <div className="space-y-2">

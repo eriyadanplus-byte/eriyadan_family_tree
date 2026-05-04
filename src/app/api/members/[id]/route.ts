@@ -74,12 +74,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const fieldMap = isPrivileged ? fullFieldMap : selfFieldMap;
 
   for (const [key, dbField] of Object.entries(fieldMap)) {
-    if (body[key] !== undefined) { fields.push(`${dbField} = ?`); values.push(body[key]); }
+    if (body[key] !== undefined) { fields.push(`"${dbField}" = ?`); values.push(body[key]); }
   }
   if (fields.length === 0) return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   values.push(id);
-  await query(`UPDATE members SET ${fields.join(', ')} WHERE id = ? AND deleted_at IS NULL`, values);
-  return NextResponse.json({ success: true });
+  try {
+    await query(`UPDATE members SET ${fields.join(', ')} WHERE id = ? AND deleted_at IS NULL`, values);
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error('Member update error:', err.message, '| SQL:', `UPDATE members SET ${fields.join(', ')} WHERE id = ?`);
+    return NextResponse.json({ error: 'Failed to save member', detail: err.message }, { status: 500 });
+  }
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
