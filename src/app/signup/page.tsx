@@ -1,0 +1,551 @@
+'use client';
+
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Eye, EyeOff, AlertCircle, Loader2, CheckCircle2,
+  Search, X, ChevronRight, ChevronLeft, TreeDeciduous, MessageCircle
+} from 'lucide-react';
+import HelpComposer from '@/components/help/HelpComposer';
+
+interface AncestorResult {
+  id: string;
+  fullName: string;
+  generation: number;
+  isLate: boolean;
+  isStub?: boolean;
+  gender?: string;
+  location?: string;
+  photo?: string | null;
+  initials?: string;
+  fatherName?: string;
+  motherName?: string;
+  // Couple fields (null for singletons)
+  spouseId?: string | null;
+  spouseName?: string | null;
+  spouseIsLate?: boolean;
+  spousePhoto?: string | null;
+  husbandId?: string | null;
+  wifeId?: string | null;
+  husbandName?: string | null;
+  wifeName?: string | null;
+}
+
+/* ── Step dot ─────────────────────────────────────── */
+function StepDot({ step, current }: { step: number; current: number }) {
+  const done   = current > step;
+  const active = current === step;
+  return (
+    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300"
+      style={
+        done   ? { background: '#4CAF72', color: '#fff' } :
+        active ? { background: '#4CAF72', color: '#fff', boxShadow: '0 0 16px rgba(76,175,114,0.5)' } :
+                 { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(232,245,233,0.30)' }
+      }>
+      {done ? '✓' : step}
+    </div>
+  );
+}
+
+/* ── Ancestor search ──────────────────────────────── */
+function AncestorSearch({ value, onChange, onNoMatch }: {
+  value: AncestorResult | null;
+  onChange: (v: AncestorResult | null) => void;
+  onNoMatch?: () => void;
+}) {
+  const [query,   setQuery]   = useState('');
+  const [results, setResults] = useState<AncestorResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [open,    setOpen]    = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const doSearch = useCallback(async (q: string) => {
+    if (q.length < 2) { setResults([]); return; }
+    setLoading(true);
+    try {
+      const res  = await fetch(`/api/auth/signup/search?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      const safe: AncestorResult[] = (Array.isArray(data?.results) ? data.results : [])
+        .filter((m: any) => m && typeof m.id === 'string' && typeof m.fullName === 'string' && m.fullName.length > 0);
+      setResults(safe);
+    } catch { setResults([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  // Debounce search — do NOT call in render
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const q = e.target.value;
+    setQuery(q);
+    setOpen(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => doSearch(q), 320);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  /* Show selected ancestor (single or couple) */
+  if (value) {
+    const v = value;
+    const isCouple = !!v.spouseId;
+    return (
+      <div className="flex items-center justify-between p-4 rounded-xl"
+        style={{ background: 'rgba(76,175,114,0.08)', border: '1px solid rgba(76,175,114,0.25)' }}>
+        <div className="flex items-center gap-3 min-w-0">
+          {isCouple ? (
+            <div className="flex -space-x-2 flex-shrink-0">
+              <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
+                style={{ background: 'rgba(76,175,114,0.15)', color: '#81C784' }}>
+                {(v.husbandName || v.fullName)[0].toUpperCase()}
+              </div>
+              <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
+                style={{ background: 'rgba(200,150,46,0.15)', color: '#E6B84A' }}>
+                {(v.wifeName || v.spouseName || '?')[0].toUpperCase()}
+              </div>
+            </div>
+          ) : v.photo ? (
+            <img src={v.photo} alt={v.fullName} className="w-10 h-10 rounded-full object-cover border border-white/10 flex-shrink-0" />
+          ) : (
+            <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm"
+              style={{ background: v.isLate ? 'rgba(239,83,80,0.15)' : 'rgba(76,175,114,0.15)', color: v.isLate ? '#EF5350' : '#81C784' }}>
+              {v.initials || v.fullName[0].toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="font-semibold text-white truncate">
+              {isCouple ? `${v.husbandName || v.fullName} & ${v.wifeName || v.spouseName}` : v.fullName}
+            </p>
+            <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(232,245,233,0.55)' }}>
+              Gen {v.generation} · {isCouple ? 'Couple' : (v.isLate ? '† Deceased' : v.isStub ? 'Unclaimed' : 'Living')}
+              {!isCouple && v.location ? ` · ${v.location}` : ''}
+            </p>
+          </div>
+        </div>
+        <button type="button" onClick={() => onChange(null)}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0">
+          <X className="w-4 h-4" style={{ color: 'rgba(232,245,233,0.40)' }} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      {/* Search input */}
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+          style={{ color: 'rgba(232,245,233,0.35)' }} />
+        <input
+          value={query}
+          onChange={handleQueryChange}
+          onFocus={() => setOpen(true)}
+          className="glass-input pl-11 pr-4"
+          placeholder="Search by name… (e.g. Ahmed, Fatima)"
+          autoComplete="off"
+        />
+        {loading && (
+          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin pointer-events-none"
+            style={{ color: 'rgba(232,245,233,0.35)' }} />
+        )}
+      </div>
+
+      {/* Dropdown results */}
+      {open && query.length >= 2 && (
+        <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl overflow-hidden z-[60] shadow-2xl"
+          style={{ background: '#0D1F0D', border: '1px solid rgba(76,175,114,0.22)' }}>
+          {!loading && results.length === 0 && (
+            <div className="px-4 py-3 space-y-2">
+              <p className="text-sm" style={{ color: 'rgba(232,245,233,0.45)' }}>
+                No family members found for &ldquo;{query}&rdquo;
+              </p>
+              <button
+                type="button"
+                onClick={() => onNoMatch?.()}
+                className="flex items-center gap-1.5 text-xs font-semibold transition-colors hover:underline"
+                style={{ color: '#81C784' }}
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                Can&apos;t find your ancestor? Message admin →
+              </button>
+            </div>
+          )}
+          {loading && (
+            <div className="px-4 py-3 flex items-center gap-2 text-sm" style={{ color: 'rgba(232,245,233,0.45)' }}>
+              <Loader2 className="w-4 h-4 animate-spin" /> Searching…
+            </div>
+          )}
+          {results.slice(0, 8).map(m => {
+            const isCouple = !!m.spouseId;
+            return (
+              <button key={m.id} type="button"
+                onClick={() => { onChange(m); setOpen(false); setQuery(''); }}
+                className="w-full text-left px-4 py-3 transition-colors hover:bg-white/5 flex items-center gap-3"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                {/* Couple: overlapping initials; singleton: photo or initial */}
+                {isCouple ? (
+                  <div className="flex -space-x-2 flex-shrink-0">
+                    <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
+                      style={{ background: 'rgba(76,175,114,0.15)', color: '#81C784' }}>
+                      {(m.husbandName || m.fullName)[0].toUpperCase()}
+                    </div>
+                    <div className="w-9 h-9 rounded-full border-2 border-[#0D1F0D] flex items-center justify-center font-bold text-xs"
+                      style={{ background: 'rgba(200,150,46,0.15)', color: '#E6B84A' }}>
+                      {(m.wifeName || m.spouseName || '?')[0].toUpperCase()}
+                    </div>
+                  </div>
+                ) : m.photo ? (
+                  <img src={m.photo} alt={m.fullName} className="w-9 h-9 rounded-full flex-shrink-0 object-cover border border-white/10" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm"
+                    style={{
+                      background: m.isLate ? 'rgba(239,83,80,0.15)' : m.isStub ? 'rgba(200,150,46,0.15)' : 'rgba(76,175,114,0.15)',
+                      color:      m.isLate ? '#EF5350'              : m.isStub ? '#E6B84A'            : '#81C784',
+                    }}>
+                    {m.initials || m.fullName[0].toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm text-white truncate">
+                    {isCouple
+                      ? `${m.husbandName || m.fullName} & ${m.wifeName || m.spouseName}`
+                      : m.fullName}
+                  </p>
+                  <p className="text-xs truncate" style={{ color: 'rgba(232,245,233,0.45)' }}>
+                    Gen {m.generation} · {isCouple
+                      ? `Couple${m.spouseIsLate || m.isLate ? ' (†)' : ''}`
+                      : (m.isLate ? '† Deceased' : m.isStub ? 'Unclaimed' : 'Living')}
+                    {!isCouple && m.location ? ` · ${m.location}` : ''}
+                    {!isCouple && m.fatherName ? ` · Child of ${m.fatherName}` : ''}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+/* ── Main signup page ─────────────────────────────── */
+export default function SignUpPage() {
+  const router = useRouter();
+  const [step,    setStep]    = useState(1);
+  const [error,   setError]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [showPw,  setShowPw]  = useState(false);
+
+  const [form, setForm] = useState({
+    name: '', email: '', mobile: '', password: '', confirmPassword: '',
+  });
+  const [ancestor, setAncestor] = useState<AncestorResult | null>(null);
+  const [relationType, setRelationType] = useState<'child' | 'spouse' | 'sibling' | ''>('');
+  const [autoApproved, setAutoApproved] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [helpStage, setHelpStage] = useState<'signup_start' | 'signup_final_no_match'>('signup_start');
+
+  const setField = (k: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm(f => ({ ...f, [k]: e.target.value }));
+
+  /* Validation */
+  const validate = (): string => {
+    if (step === 1) {
+      if (!form.name.trim())  return 'Full name is required';
+      if (!form.email.trim()) return 'Email is required';
+      if (!/\S+@\S+\.\S+/.test(form.email)) return 'Enter a valid email address';
+      if (!form.mobile.trim()) return 'Mobile number is required';
+    }
+    if (step === 2) {
+      if (form.password.length < 8) return 'Password must be at least 8 characters';
+      if (form.password !== form.confirmPassword) return 'Passwords do not match';
+    }
+    if (step === 3) {
+      if (!ancestor) return 'Please select your ancestor from the family tree';
+    }
+    return '';
+  };
+
+  const next = () => {
+    setError('');
+    const err = validate();
+    if (err) { setError(err); return; }
+    if (step < 3) { setStep(s => s + 1); return; }
+    submit();
+  };
+
+  const submit = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const payload: any = {
+        name:       form.name,
+        email:      form.email,
+        mobile:     form.mobile,
+        password:   form.password,
+        ancestorId: ancestor?.id ?? null,
+        relationType: relationType || null,
+      };
+      // If couple selected, pass the second parent's ID
+      if (ancestor?.spouseId) {
+        payload.secondaryAncestorId = ancestor.spouseId;
+      }
+      // If a stub member was selected, include disambiguation fields for auto-approval
+      if (ancestor && ancestor.isStub && relationType) {
+        payload.stubMemberId = ancestor.id;
+        payload.relationType = relationType;
+      }
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
+      setAutoApproved(!!data.autoApproved);
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* Success screen */
+  if (success) return (
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#0D1F0D' }}>
+      <div className="orb orb-green fixed pointer-events-none" />
+      <div className="orb orb-gold  fixed pointer-events-none" />
+      <div className="relative z-10 w-full max-w-md text-center">
+        <div className="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-6"
+          style={{ background: autoApproved ? 'rgba(76,175,114,0.15)' : 'rgba(200,150,46,0.15)', border: autoApproved ? '1px solid rgba(76,175,114,0.30)' : '1px solid rgba(200,150,46,0.30)' }}>
+          <CheckCircle2 className="w-10 h-10" style={{ color: autoApproved ? '#81C784' : '#E6B84A' }} />
+        </div>
+        <h1 className="font-display text-3xl font-bold text-white mb-4">
+          {autoApproved ? 'Welcome to the Family!' : 'Registration Submitted!'}
+        </h1>
+        <p className="mb-8 text-base leading-relaxed" style={{ color: 'rgba(232,245,233,0.55)' }}>
+          {autoApproved
+            ? 'Your account has been automatically linked to your family profile. You can sign in right away!'
+            : "Your request has been sent to the family admin for approval. You'll be able to sign in once approved — usually within 24 hours."}
+        </p>
+        <button onClick={() => router.push('/login')}
+          className="btn-primary px-10 py-3 text-base">
+          {autoApproved ? 'Sign In Now' : 'Go to Sign In'}
+        </button>
+      </div>
+    </div>
+  );
+
+  const STEP_LABELS = ['Your Details', 'Set Password', 'Find Your Ancestor'];
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 py-12"
+      style={{ background: '#0D1F0D' }}>
+      <div className="orb orb-green fixed pointer-events-none" />
+      <div className="orb orb-gold  fixed pointer-events-none" />
+
+      <div className="relative z-10 w-full max-w-lg">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: 'rgba(76,175,114,0.12)', border: '1px solid rgba(76,175,114,0.22)' }}>
+            <TreeDeciduous className="w-7 h-7" style={{ color: '#81C784' }} />
+          </div>
+          <h1 className="font-display text-3xl font-bold text-white mb-1">Join Eriyadan's Legacy</h1>
+          <p className="text-sm" style={{ color: 'rgba(232,245,233,0.45)' }}>
+            Step {step} of 3 — {STEP_LABELS[step - 1]}
+          </p>
+        </div>
+
+        {/* Step progress */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          {[1, 2, 3].map((s, i) => (
+            <div key={s} className="flex items-center gap-3">
+              <StepDot step={s} current={step} />
+              {i < 2 && (
+                <div className="w-12 h-px transition-colors duration-300"
+                  style={{ background: step > s ? 'rgba(76,175,114,0.6)' : 'rgba(255,255,255,0.10)' }} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Card */}
+        <div className="p-8 rounded-3xl"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
+
+          {error && (
+            <div className="flex items-center gap-3 p-4 rounded-xl mb-6 text-sm"
+              style={{ background: 'rgba(239,83,80,0.10)', border: '1px solid rgba(239,83,80,0.20)', color: '#EF5350' }}>
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Step 1 — Personal details */}
+          {step === 1 && (
+            <div className="space-y-5">
+              {[
+                { label: 'Full Name *', key: 'name',   type: 'text',  placeholder: 'e.g. Ahmed Al-Rashidi' },
+                { label: 'Email Address *', key: 'email', type: 'email', placeholder: 'you@example.com' },
+                { label: 'Mobile Number *', key: 'mobile', type: 'tel', placeholder: '+971 50 000 0000' },
+              ].map(({ label, key, type, placeholder }) => (
+                <div key={key}>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+                    style={{ color: 'rgba(232,245,233,0.50)' }}>{label}</label>
+                  <input type={type} value={form[key as keyof typeof form]}
+                    onChange={setField(key as keyof typeof form)}
+                    className="glass-input" placeholder={placeholder} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Step 2 — Password */}
+          {step === 2 && (
+            <div className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+                  style={{ color: 'rgba(232,245,233,0.50)' }}>Create Password *</label>
+                <div className="relative">
+                  <input type={showPw ? 'text' : 'password'} value={form.password}
+                    onChange={setField('password')} className="glass-input pr-12"
+                    placeholder="Min. 8 characters" />
+                  <button type="button" onClick={() => setShowPw(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1">
+                    {showPw
+                      ? <EyeOff className="w-5 h-5" style={{ color: 'rgba(232,245,233,0.35)' }} />
+                      : <Eye    className="w-5 h-5" style={{ color: 'rgba(232,245,233,0.35)' }} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+                  style={{ color: 'rgba(232,245,233,0.50)' }}>Confirm Password *</label>
+                <input type="password" value={form.confirmPassword}
+                  onChange={setField('confirmPassword')} className="glass-input"
+                  placeholder="Re-enter password" />
+              </div>
+              <div className="p-3 rounded-xl text-xs leading-relaxed"
+                style={{ background: 'rgba(76,175,114,0.06)', color: 'rgba(232,245,233,0.50)' }}>
+                💡 Use at least 8 characters. Mix letters and numbers for a strong password.
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 — Ancestor */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <p className="text-sm leading-relaxed" style={{ color: 'rgba(232,245,233,0.55)' }}>
+                Search for your closest relative already in the tree (parent, grandparent, uncle/aunt). This places you correctly in the family lineage.
+              </p>
+              <AncestorSearch
+                value={ancestor}
+                onChange={setAncestor}
+                onNoMatch={() => { setHelpStage('signup_final_no_match'); setShowHelp(true); }}
+              />
+              {/* Relation type selector — shown after ancestor is selected */}
+              {ancestor && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: 'rgba(232,245,233,0.50)' }}>How are you related?</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'child', label: 'Child' },
+                      { value: 'spouse', label: 'Spouse' },
+                      { value: 'sibling', label: 'Sibling' },
+                    ].map(opt => (
+                      <button key={opt.value} type="button"
+                        onClick={() => setRelationType(opt.value as any)}
+                        className="py-2 px-3 rounded-xl text-sm font-medium transition-all"
+                        style={relationType === opt.value
+                          ? { background: 'rgba(76,175,114,0.20)', border: '1px solid rgba(76,175,114,0.40)', color: '#81C784' }
+                          : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(232,245,233,0.45)' }
+                        }>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  {(ancestor as AncestorResult)?.isStub && relationType && (
+                    <div className="p-3 rounded-xl text-xs leading-relaxed"
+                      style={{ background: 'rgba(76,175,114,0.06)', border: '1px solid rgba(76,175,114,0.15)', color: 'rgba(232,245,233,0.60)' }}>
+                      ✨ This profile is unclaimed. If your name and mobile match, your account will be auto-approved and linked to this profile.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="flex gap-3 mt-8">
+            {step > 1 && (
+              <button type="button"
+                onClick={() => { setStep(s => s - 1); setError(''); }}
+                className="btn-ghost px-5 py-3 flex items-center gap-2 flex-shrink-0">
+                <ChevronLeft className="w-4 h-4" /> Back
+              </button>
+            )}
+            <button type="button" onClick={next} disabled={loading}
+              className="flex-1 h-12 rounded-full font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              style={{
+                background:  'linear-gradient(135deg, #4CAF72, #2E7D32)',
+                boxShadow:   '0 4px 20px rgba(76,175,114,0.30)',
+              }}>
+              {loading
+                ? <Loader2 className="w-5 h-5 animate-spin" />
+                : step < 3
+                  ? <><span>Continue</span><ChevronRight className="w-4 h-4" /></>
+                  : <span>Submit Registration</span>}
+            </button>
+          </div>
+        </div>
+
+        <p className="text-center mt-6 text-sm" style={{ color: 'rgba(232,245,233,0.35)' }}>
+          Already a member?{' '}
+          <a href="/login" className="hover:underline font-semibold" style={{ color: '#81C784' }}>Sign In</a>
+        </p>
+        <p className="text-center mt-2">
+          <a href="/" className="text-sm hover:underline" style={{ color: 'rgba(232,245,233,0.25)' }}>← Back to Home</a>
+        </p>
+      </div>
+
+      {/* Entry Point B: persistent "Talk to admin" help button, visible throughout signup */}
+      <button
+        type="button"
+        onClick={() => { setHelpStage('signup_start'); setShowHelp(true); }}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl transition-all hover:scale-105"
+        style={{ background: 'rgba(13,31,13,0.96)', border: '1px solid rgba(76,175,114,0.30)', color: '#81C784', backdropFilter: 'blur(12px)' }}
+        title="Need help? Talk to admin"
+      >
+        <MessageCircle className="w-4 h-4" />
+        <span className="text-xs font-semibold">Need help?</span>
+      </button>
+
+      {/* Help Composer modal */}
+      <HelpComposer
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+        triggerStage={helpStage}
+        contextSnapshot={helpStage === 'signup_final_no_match'
+          ? { full_name: form.name, mobile: form.mobile, email: form.email }
+          : { full_name: form.name, mobile: form.mobile }}
+      />
+    </div>
+  );
+}

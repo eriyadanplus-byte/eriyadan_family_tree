@@ -1,0 +1,25 @@
+import { NextResponse } from 'next/server';
+import { getSession, rolePermissions } from '@/lib/auth';
+
+export async function GET() {
+  const session = await getSession();
+
+  if (!session) {
+    return NextResponse.json(
+      { error: 'Not authenticated' },
+      { status: 401 }
+    );
+  }
+
+  const permissions = rolePermissions[session.role] || {};
+
+  return NextResponse.json({
+    canAdd: permissions.canAdd ?? false,
+    canEdit: permissions.canEdit ?? false,
+    canDelete: permissions.canDelete ?? false,
+    canExport: permissions.canExport ?? false,
+    canManageUsers: permissions.canManageUsers ?? false,
+    canViewContact: true, // All authenticated family members can view contact info
+    role: session.role,
+  });
+}

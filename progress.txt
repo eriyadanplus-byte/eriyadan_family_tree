@@ -1,0 +1,85 @@
+# Eriyadan's Legacy — v1.2 Progress Matrix
+
+## v1.2 Feature Sprint — Status
+
+| Step | Feature | Status | Key Files |
+|------|---------|--------|-----------|
+| 1 | Schema & migration | ✅ Done | `db/migrations/003_v12.sql`, `db/schema.sql`, `scripts/seed.js` |
+| 2 | Family service layer | ✅ Done | `src/lib/family.ts` (descendantIds, spouseOf, childrenOf) |
+| 3 | Avatar upload pipeline | ✅ Done | `src/components/profile/AvatarUpload.tsx`, `src/app/api/members/[id]/avatar/route.ts` |
+| 4 | Profile fields & social links | ✅ Done | `src/components/profile/ContactPanel.tsx`, `src/app/profile/[id]/page.tsx` |
+| 5 | Member-driven add | ✅ Done | `src/app/api/members/relatives/route.ts`, `src/app/tree/add/page.tsx` |
+| 6 | Signup disambiguation & auto-approval | ✅ Done | `src/app/api/auth/signup/route.ts`, `src/app/api/auth/signup/search/route.ts`, `src/app/signup/page.tsx` |
+| 7 | Editor approval scoping | ✅ Done | `src/app/api/admin/approval-scopes/route.ts`, `src/app/api/admin/approvals/route.ts` |
+| 8 | Tree UI overhaul | ✅ Done | `src/components/tree/MemberNode.tsx`, `src/components/tree/DesktopTree.tsx`, `src/components/tree/MobileTreeInner.tsx`, `src/components/tree/SpousePair.tsx`, `src/app/api/tree/route.ts` |
+| 9 | Admin approval scopes UI | ✅ Done | `src/app/admin/approval-scopes/page.tsx`, `src/components/admin/AdminSidebar.tsx` |
+| 10 | PRD update | ✅ Done | `PRD.md` (v1.2) |
+| 11 | QA pass | ✅ Done | `progress.txt`, `tsc --noEmit` passes clean |
+
+## TypeScript Build Status
+- `npx tsc --noEmit` → **0 errors** (as of v1.2 completion)
+
+## New API Routes Added (v1.2)
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| /api/members/[id]/avatar | POST | Upload avatar image |
+| /api/members/relatives | POST | Member-driven add spouse/child stub |
+| /api/auth/signup/search | GET | Member search for signup disambiguation |
+| /api/tree | GET | Tree data with spouse pairing + photos |
+| /api/admin/approval-scopes | GET/POST/DELETE | Approval scope CRUD |
+
+## Modified API Routes (v1.2)
+
+| Route | Change |
+|-------|--------|
+| /api/auth/signup | Added stub claim auto-approval (stubMemberId + relationType) |
+| /api/auth/login | Added canApprove to JWT token + response |
+| /api/admin/approvals | Editors with can_approve can approve within scope |
+
+## New Components (v1.2)
+
+| Component | Purpose |
+|-----------|---------|
+| AvatarUpload | Client-side avatar compression + upload |
+| SpousePair | Side-by-side husband-wife tree display |
+
+## New Lib Files (v1.2)
+
+| File | Purpose |
+|------|---------|
+| src/lib/family.ts | BFS descendant traversal, spouse/child lookups |
+| src/lib/audit-log.ts | Extracted pushAudit from route (TS fix) |
+
+## Database Schema Additions (v1.2)
+
+### members table
+- is_stub, claimed_by_user_id, added_by_member_id
+- profile_photo_url, avatar_version
+- current_role, company, facebook, youtube, custom_link
+
+### users table
+- can_approve (TINYINT)
+
+### New tables
+- approval_scopes (id, user_id, root_member_id, created_by, created_at)
+- spouses (member_a_id, member_b_id, status)
+
+## Remaining Work (v1.3)
+
+- [ ] Cloudflare D1 database swap
+- [ ] Email notification on approval
+- [ ] PWA manifest + service worker
+- [ ] Arabic/Urdu language support
+- [ ] Tree export as PNG
+- [ ] Audit log DB persistence (replace in-memory)
+- [ ] Dead code cleanup (db.ts, backup files, test scripts)
+
+## Pre-existing Issues (from Phase 0C triage, lower priority)
+
+- Admin dashboard stats still partially hardcoded
+- Permissions page uses mock data
+- Settings page not persisted
+- Export API uses hardcoded data
+- CSP hardcoded port
+- Middleware doesn't check role for admin routes

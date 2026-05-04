@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Copy-Item *)",
+      "PowerShell(Test-Path \"C:\\\\Users\\\\SAHARA\\\\Downloads\\\\Fam\\\\IMPROVEMENT_PLAN.md\"; \\(Get-Item \"C:\\\\Users\\\\SAHARA\\\\Downloads\\\\Fam\\\\IMPROVEMENT_PLAN.md\"\\).Length)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\Downloads\\\\Fam\" -Recurse | Select-Object FullName | Where-Object {$_ -match '\\\\.\\(tsx?|jsx?|css\\)$'})",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\Downloads\\\\Fam\" -Recurse -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName } | Select-Object -First 100)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\Fam\" -Directory -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike \"node_modules\" -and $_.Name -notlike \".next\" -and $_.Name -notlike \".git\" } | Select-Object -ExpandProperty Name)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\Fam\" -File | Where-Object { $_.Name -match \"lock|npm|pnpm|yarn\" } | Select-Object Name)",
+      "PowerShell(New-Item *)",
+      "Bash(rtk npx *)",
+      "Bash(mysql *)",
+      "PowerShell(mysql *)",
+      "PowerShell(Get-Content \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\Fam\\\\db\\\\migrations\\\\003_app_settings.sql\" | & \"C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin\\\\mysql.exe\" -h127.0.0.1 -P3306 -uroot \"-proot\" family_tree 2>&1)",
+      "Skill(gsd:debug)",
+      "Bash(powershell *)",
+      "Bash(rtk grep *)",
+      "PowerShell(Test-Path *)",
+      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)"
+    ]
+  }
+}
