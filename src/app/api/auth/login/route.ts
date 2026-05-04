@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     await query('UPDATE users SET last_seen = NOW() WHERE id = ?', [user.id]);
 
     const memberIdStr = user.member_id != null ? String(user.member_id) : null;
-    const token = createToken({ id: String(user.id), email: user.email, role: user.role, memberId: memberIdStr, canApprove: !!user.can_approve });
+    const token = await createToken({ id: String(user.id), email: user.email, role: user.role, memberId: memberIdStr, canApprove: !!user.can_approve });
     const response = NextResponse.json({
       success: true,
       user: { id: user.id, email: user.email, role: user.role, memberId: memberIdStr, canApprove: !!user.can_approve, name: user.name }

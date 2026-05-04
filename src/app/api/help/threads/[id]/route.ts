@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const cookieStore = await cookies();
     const anonCookie = cookieStore.get(HELP_ANON_COOKIE);
     if (anonCookie?.value) {
-      const hash = hashAnonToken(anonCookie.value);
+      const hash = await hashAnonToken(anonCookie.value);
       authorized = hash === thread.anon_token_hash;
     }
   }

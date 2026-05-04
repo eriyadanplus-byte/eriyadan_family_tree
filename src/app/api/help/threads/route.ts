@@ -49,10 +49,10 @@ export async function POST(request: NextRequest) {
   } else {
     const cookieStore = await cookies();
     const anonCookie = cookieStore.get(HELP_ANON_COOKIE);
-    if (anonCookie?.value && verifyAnonHelpToken(anonCookie.value)) {
-      anonTokenHash = hashAnonToken(anonCookie.value);
+    if (anonCookie?.value && (await verifyAnonHelpToken(anonCookie.value))) {
+      anonTokenHash = await hashAnonToken(anonCookie.value);
     } else {
-      const issued = issueAnonHelpToken();
+      const issued = await issueAnonHelpToken();
       newAnonToken = issued.token;
       anonTokenHash = issued.hash;
     }

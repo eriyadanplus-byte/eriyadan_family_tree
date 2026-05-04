@@ -8,7 +8,7 @@ import { rateLimit } from '@/lib/rate-limit';
 async function linkAnonThread(request: NextRequest, userId: string) {
   const anonToken = request.cookies.get(HELP_ANON_COOKIE)?.value;
   if (!anonToken) return;
-  const hash = hashAnonToken(anonToken);
+  const hash = await hashAnonToken(anonToken);
   await query(
     `UPDATE help_threads SET user_id = ?, anon_token_hash = NULL WHERE anon_token_hash = ? AND status != 'resolved'`,
     [userId, hash]

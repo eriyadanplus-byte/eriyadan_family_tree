@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
     isHandler = await canViewHandlerInbox(session);
   } else {
     const anonCookie = cookieStore.get(HELP_ANON_COOKIE);
-    if (!anonCookie?.value || !verifyAnonHelpToken(anonCookie.value)) {
+    if (!anonCookie?.value || !(await verifyAnonHelpToken(anonCookie.value))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    anonTokenHash = hashAnonToken(anonCookie.value);
+    anonTokenHash = await hashAnonToken(anonCookie.value);
   }
 
   const encoder = new TextEncoder();

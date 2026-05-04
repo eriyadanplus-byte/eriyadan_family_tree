@@ -58,8 +58,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } else {
     const cookieStore = await cookies();
     const anonCookie = cookieStore.get(HELP_ANON_COOKIE);
-    if (anonCookie?.value && verifyAnonHelpToken(anonCookie.value)) {
-      const hash = hashAnonToken(anonCookie.value);
+    if (anonCookie?.value && (await verifyAnonHelpToken(anonCookie.value))) {
+      const hash = await hashAnonToken(anonCookie.value);
       if (hash === thread.anon_token_hash) {
         authorized = true;
         senderKind = 'anon';

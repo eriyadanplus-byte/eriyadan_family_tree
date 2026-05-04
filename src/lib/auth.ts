@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
+import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
 
 export interface SessionUser {
@@ -64,22 +64,30 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
+function getSecretKey() {
+  return new TextEncoder().encode(JWT_SECRET);
+}
+
 // Create JWT token
-export function createToken(payload: { id: string; email: string; role: string; memberId?: string | null; canApprove?: boolean }): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+export async function createToken(payload: { id: string; email: string; role: string; memberId?: string | null; canApprove?: boolean }): Promise<string> {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(getSecretKey());
 }
 
 // Verify JWT token
-export function verifyToken(token: string): SessionUser | null {
+export async function verifyToken(token: string): Promise<SessionUser | null> {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as SessionUser & { exp: number };
+    const { payload } = await jwtVerify(token, getSecretKey(), { clockTolerance: 60 });
     return {
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role,
-      memberId: decoded.memberId,
-      canApprove: decoded.canApprove,
-      name: decoded.name,
+      id: payload.id as string,
+      email: payload.email as string,
+      role: payload.role as SessionUser['role'],
+      memberId: payload.memberId as string | null | undefined ?? null,
+      canApprove: payload.canApprove as boolean | undefined,
+      name: payload.name as string | undefined,
     };
   } catch {
     return null;
@@ -94,7 +102,7 @@ export async function getSession(): Promise<SessionUser | null> {
     return null;
   }
 
-  return verifyToken(sessionCookie.value);
+  return await verifyToken(sessionCookie.value);
 }
 
 // Check if user has permission
