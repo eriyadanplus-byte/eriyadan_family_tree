@@ -186,14 +186,14 @@ export default function PublicProfilePage() {
                     memberId={member.id}
                     currentVersion={member.avatarVersion || 0}
                     currentUrl={member.profilePhotoUrl || null}
-                    onUploaded={(v) => setMember({ ...member, avatarVersion: v, profilePhotoUrl: `/avatars/${member.id}.jpg` })}
+                    onUploaded={(v, url) => setMember({ ...member, avatarVersion: v, profilePhotoUrl: url })}
                   />
                 ) : (
                   <div className="relative">
                     <div className="absolute -inset-2 rounded-full bg-gradient-to-tr from-purple-400 to-emerald-400 opacity-50 blur-xl" />
                     <div className="relative w-24 h-24 rounded-full border-4 border-white/10 bg-surface-container flex items-center justify-center overflow-hidden">
                       {member.profilePhotoUrl ? (
-                        <img src={`/avatars/${member.id}.jpg?v=${member.avatarVersion || 0}`} alt={member.fullName} className="w-full h-full object-cover" />
+                        <img src={`${member.profilePhotoUrl}?v=${member.avatarVersion || 0}`} alt={member.fullName} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-white/30 text-3xl font-bold">{member.fullName.charAt(0)}</span>
                       )}

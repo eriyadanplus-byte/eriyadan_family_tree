@@ -134,7 +134,7 @@ export default function MobileTree({ members, focusId, onMemberClick }: Props) {
               <div className="flex items-center gap-3 mb-2">
                 {hasPhoto ? (
                   <img
-                    src={`/avatars/${node.id}.jpg?v=${member?.avatarVersion || 0}`}
+                    src={`${member?.profilePhotoUrl || member?.photoUrl}?v=${member?.avatarVersion || 0}`}
                     alt={node.data.label as string}
                     className="w-9 h-9 rounded-full object-cover border border-white/10 flex-shrink-0"
                   />

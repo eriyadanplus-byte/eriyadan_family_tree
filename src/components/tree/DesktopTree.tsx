@@ -233,7 +233,7 @@ export default function DesktopTree({
             }}>
               {member?.profilePhotoUrl || member?.photoUrl ? (
                 <img
-                  src={`/avatars/${id}.jpg?v=${member?.avatarVersion || 0}`}
+                  src={`${member?.profilePhotoUrl || member?.photoUrl}?v=${member?.avatarVersion || 0}`}
                   alt={data.label as string}
                   style={{
                     width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover',

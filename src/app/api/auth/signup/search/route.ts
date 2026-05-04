@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getAvatarUrl } from '@/lib/avatar';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -53,11 +54,11 @@ export async function GET(request: NextRequest) {
       const husbandName = memberIsHusband ? r.full_name : r.spouse_name;
       const wifeName    = memberIsHusband ? r.spouse_name : r.full_name;
       const husbandPhoto = memberIsHusband
-        ? (r.profile_photo_url ? `/avatars/${r.id}.jpg?v=${r.avatar_version || 0}` : null)
-        : (r.spouse_photo ? `/avatars/${r.spouse_id}.jpg?v=${r.spouse_avatar_version || 0}` : null);
+        ? getAvatarUrl(r.profile_photo_url, String(r.id), r.avatar_version || 0)
+        : getAvatarUrl(r.spouse_photo, String(r.spouse_id), r.spouse_avatar_version || 0);
       const wifePhoto = memberIsHusband
-        ? (r.spouse_photo ? `/avatars/${r.spouse_id}.jpg?v=${r.spouse_avatar_version || 0}` : null)
-        : (r.profile_photo_url ? `/avatars/${r.id}.jpg?v=${r.avatar_version || 0}` : null);
+        ? getAvatarUrl(r.spouse_photo, String(r.spouse_id), r.spouse_avatar_version || 0)
+        : getAvatarUrl(r.profile_photo_url, String(r.id), r.avatar_version || 0);
 
       return {
         id: String(r.id),
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
         generation: r.generation,
         isStub: !!r.is_stub,
         isLate: !!r.is_late,
-        photo: r.profile_photo_url ? `/avatars/${r.id}.jpg?v=${r.avatar_version || 0}` : null,
+        photo: getAvatarUrl(r.profile_photo_url, String(r.id), r.avatar_version || 0),
         initials: r.full_name?.charAt(0)?.toUpperCase() || '?',
         gender: r.gender,
         location: r.location,
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
         spouseName: r.spouse_name || null,
         spouseIsLate: !!r.spouse_is_late,
         spouseIsStub: !!r.spouse_is_stub,
-        spousePhoto: r.spouse_photo ? `/avatars/${r.spouse_id}.jpg?v=${r.spouse_avatar_version || 0}` : null,
+        spousePhoto: getAvatarUrl(r.spouse_photo, String(r.spouse_id), r.spouse_avatar_version || 0),
         // Husband/wife order for display
         husbandId,
         wifeId,

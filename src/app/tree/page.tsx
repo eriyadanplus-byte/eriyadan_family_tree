@@ -273,8 +273,8 @@ function TreePageContent({ focusId }: { focusId: string | null }) {
             <div className="flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-full border-2 border-white/10 bg-surface-container flex items-center justify-center overflow-hidden">
                 {selectedMember?.profilePhotoUrl || selectedMember?.photoUrl ? (
-                  <img 
-                    src={`/avatars/${selectedMember.id}.jpg?v=${selectedMember.avatarVersion || 0}`}
+                  <img
+                    src={`${selectedMember.profilePhotoUrl || selectedMember.photoUrl}?v=${selectedMember.avatarVersion || 0}`}
                     alt={selectedMember.fullName}
                     className="w-full h-full object-cover"
                   />

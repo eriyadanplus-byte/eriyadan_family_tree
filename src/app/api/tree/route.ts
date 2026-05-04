@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getAvatarUrl } from '@/lib/avatar';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
         isOnline: !!m.is_online,
         isStub: !!m.is_stub,
         gender: m.gender,
-        photo: m.profile_photo_url ? `/avatars/${mid}.jpg?v=${m.avatar_version || 0}` : null,
+        photo: getAvatarUrl(m.profile_photo_url, mid, m.avatar_version || 0),
         fatherId: m.father_id ? String(m.father_id) : null,
         motherId: m.mother_id ? String(m.mother_id) : null,
         spouseId: spouseId || null,
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
           isOnline: !!memberLookup[spouseId].is_online,
           isStub: !!memberLookup[spouseId].is_stub,
           gender: memberLookup[spouseId].gender,
-          photo: memberLookup[spouseId].profile_photo_url ? `/avatars/${spouseId}.jpg?v=${memberLookup[spouseId].avatar_version || 0}` : null,
+          photo: getAvatarUrl(memberLookup[spouseId].profile_photo_url, spouseId, memberLookup[spouseId].avatar_version || 0),
         } : null,
         mobileNumber: m.mobile_number,
         email: m.email,

@@ -252,7 +252,7 @@ export default function AdminMembersPage() {
                   memberId={editingMember.id}
                   currentVersion={editingMember.avatarVersion || 0}
                   currentUrl={editingMember.profilePhotoUrl || null}
-                  onUploaded={(v) => setEditingMember({ ...editingMember, avatarVersion: v, profilePhotoUrl: `/avatars/${editingMember.id}.jpg` })}
+                  onUploaded={(v, url) => setEditingMember({ ...editingMember, avatarVersion: v, profilePhotoUrl: url })}
                 />
               </div>
 

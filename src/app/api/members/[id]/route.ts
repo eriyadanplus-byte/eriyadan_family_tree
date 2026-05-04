@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getSession, rolePermissions } from '@/lib/auth';
+import { getAvatarUrl } from '@/lib/avatar';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -33,10 +34,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     claimedByUserId: member.claimed_by_user_id,
     addedByMemberId: member.added_by_member_id,
     avatarVersion: member.avatar_version || 0,
-    father: father ? { id: father.id, fullName: father.full_name, photo: father.profile_photo_url ? `/avatars/${father.id}.jpg?v=${father.avatar_version || 0}` : null } : null,
-    mother: mother ? { id: mother.id, fullName: mother.full_name, photo: mother.profile_photo_url ? `/avatars/${mother.id}.jpg?v=${mother.avatar_version || 0}` : null } : null,
-    spouse: spouseRow ? { id: spouseRow.id, fullName: spouseRow.full_name, photo: spouseRow.profile_photo_url ? `/avatars/${spouseRow.id}.jpg?v=${spouseRow.avatar_version || 0}` : null } : null,
-    children: children.map(c => ({ id: c.id, fullName: c.full_name, generation: c.generation, photo: c.profile_photo_url ? `/avatars/${c.id}.jpg?v=${c.avatar_version || 0}` : null })),
+    father: father ? { id: father.id, fullName: father.full_name, photo: getAvatarUrl(father.profile_photo_url, father.id, father.avatar_version || 0) } : null,
+    mother: mother ? { id: mother.id, fullName: mother.full_name, photo: getAvatarUrl(mother.profile_photo_url, mother.id, mother.avatar_version || 0) } : null,
+    spouse: spouseRow ? { id: spouseRow.id, fullName: spouseRow.full_name, photo: getAvatarUrl(spouseRow.profile_photo_url, spouseRow.id, spouseRow.avatar_version || 0) } : null,
+    children: children.map(c => ({ id: c.id, fullName: c.full_name, generation: c.generation, photo: getAvatarUrl(c.profile_photo_url, c.id, c.avatar_version || 0) })),
   });
 }
 

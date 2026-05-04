@@ -10,7 +10,7 @@ interface AvatarUploadProps {
   memberId: string;
   currentVersion: number;
   currentUrl: string | null;
-  onUploaded?: (newVersion: number) => void;
+  onUploaded?: (newVersion: number, url: string) => void;
 }
 
 export default function AvatarUpload({ memberId, currentVersion, currentUrl, onUploaded }: AvatarUploadProps) {
@@ -49,7 +49,10 @@ export default function AvatarUpload({ memberId, currentVersion, currentUrl, onU
       }
 
       const data = await res.json();
-      if (onUploaded) onUploaded(data.avatarVersion || currentVersion + 1);
+      const newVersion = data.avatarVersion || currentVersion + 1;
+      if (onUploaded) onUploaded(newVersion, data.url);
+      // Update preview with the server URL for cache-busting
+      setPreview(data.url ? `${data.url}?v=${newVersion}` : null);
     } catch (err: any) {
       setError(err.message || 'Upload failed');
       // Revert preview
