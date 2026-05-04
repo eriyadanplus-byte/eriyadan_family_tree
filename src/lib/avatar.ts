@@ -6,10 +6,10 @@ export function getAvatarUrl(
   profilePhotoUrl: string | null | undefined,
   id: string,
   avatarVersion: number = 0
-): string {
+): string | null {
   if (profilePhotoUrl) {
     const sep = profilePhotoUrl.includes('?') ? '&' : '?';
     return `${profilePhotoUrl}${sep}v=${avatarVersion}`;
   }
-  return `/avatars/${id}.jpg?v=${avatarVersion}`;
+  return null;
 }

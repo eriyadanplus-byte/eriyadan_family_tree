@@ -91,7 +91,7 @@ export default function EditProfileModal({ member, currentUserRole, onClose, onS
               memberId={form.id}
               currentVersion={form.avatarVersion || 0}
               currentUrl={form.profilePhotoUrl || null}
-              onUploaded={(v) => update('avatarVersion', v)}
+              onUploaded={(v, url) => setForm(f => ({ ...f, avatarVersion: v, profilePhotoUrl: url }))}
             />
           </div>
 
