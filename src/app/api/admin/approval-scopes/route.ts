@@ -4,6 +4,7 @@ import { getSession, rolePermissions } from '@/lib/auth';
 import { descendantIds } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 // GET: List all approval scopes (admin) or own scopes (editor)
 export async function GET() {

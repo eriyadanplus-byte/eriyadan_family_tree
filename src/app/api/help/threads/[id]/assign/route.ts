@@ -5,6 +5,7 @@ import { AssignHandlerSchema } from '@/lib/help/schemas';
 import bus from '@/lib/help/bus';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

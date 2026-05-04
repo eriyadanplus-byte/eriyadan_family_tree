@@ -8,6 +8,7 @@ import { SendMessageSchema } from '@/lib/help/schemas';
 import bus from '@/lib/help/bus';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 // 10 messages per identity per minute
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();

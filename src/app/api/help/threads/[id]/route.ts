@@ -6,6 +6,7 @@ import { verifyAnonHelpToken, hashAnonToken, HELP_ANON_COOKIE } from '@/lib/help
 import { canAccessThread, type HelpThread } from '@/lib/help/permissions';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 async function getThread(id: string): Promise<HelpThread | null> {
   const rows = await query(

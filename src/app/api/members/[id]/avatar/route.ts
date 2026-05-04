@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 
 // Conditional Supabase Storage import (lazy, only used when provider=supabase)
 let supabaseStorage: any;
@@ -11,11 +9,11 @@ if (process.env.DATABASE_PROVIDER === 'supabase') {
   supabaseStorage = require('@/lib/supabase').supabase.storage;
 }
 
-const AVATAR_DIR = path.join(process.cwd(), 'public', 'avatars');
 const MAX_SIZE = 220 * 1024; // 220 KB hard limit (client compresses to ≤200KB)
 const IS_SUPABASE = process.env.DATABASE_PROVIDER === 'supabase';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export async function POST(
   request: NextRequest,
@@ -78,14 +76,17 @@ export async function POST(
     const { data: publicUrlData } = bucket.getPublicUrl(fileName);
     photoUrl = publicUrlData.publicUrl;
   } else {
-    // Local filesystem — write to public/avatars
+    // Local filesystem — write to public/avatars (Node.js runtime only)
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const AVATAR_DIR = path.join(process.cwd(), 'public', 'avatars');
     try {
-      await mkdir(AVATAR_DIR, { recursive: true });
+      await fs.mkdir(AVATAR_DIR, { recursive: true });
     } catch {
       // may already exist
     }
     const filePath = path.join(AVATAR_DIR, `${id}.jpg`);
-    await writeFile(filePath, new Uint8Array(buffer));
+    await fs.writeFile(filePath, new Uint8Array(buffer));
     photoUrl = `/avatars/${id}.jpg`;
   }
 

@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  serverExternalPackages: ['bcryptjs', 'mysql2'],
   // Transpile @xyflow/react so Next.js compiles it directly instead of treating
   // its "use client" directive (present in the ESM bundle) as an RSC module
   // boundary — which causes webpack module factory to be undefined at hydration.

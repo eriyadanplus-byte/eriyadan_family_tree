@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export async function GET() {
   let db = false;

@@ -5,6 +5,7 @@ import { canAccessThread, type HelpThread } from '@/lib/help/permissions';
 import bus from '@/lib/help/bus';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

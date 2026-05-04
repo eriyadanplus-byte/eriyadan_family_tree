@@ -3,6 +3,7 @@ import { query } from '@/lib/db';
 import { getSession, rolePermissions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 function mapMember(row: any) {
   return {

@@ -3,6 +3,7 @@ import { query } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   const session = await getSession();

@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth';
 import { setSpouse } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 async function resolveMemberId(session: any, reqMemberId?: string | null): Promise<string | null> {
   if (reqMemberId && session.role === 'super_admin') return reqMemberId;

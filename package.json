@@ -10,7 +10,8 @@
     "clean": "rm -rf .next",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "pages:build": "npx @cloudflare/next-on-pages@1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",

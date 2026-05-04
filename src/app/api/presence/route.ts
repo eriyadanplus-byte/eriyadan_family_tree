@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 // POST /api/presence - heartbeat to update last_seen
 export async function POST(request: Request) {
