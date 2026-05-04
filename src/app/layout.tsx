@@ -39,16 +39,19 @@ export default function RootLayout({
         />
         <script dangerouslySetInnerHTML={{ __html: `(function(){var a=["bis_skin_checked","bis_register"];new MutationObserver(function(m){m.forEach(function(r){r.addedNodes.forEach(function(n){if(n.nodeType===1)a.forEach(function(x){if(n.hasAttribute&&n.hasAttribute(x))n.removeAttribute(x)})})})}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:a})})()` }} />
       </head>
-      <body className="font-sans antialiased" suppressHydrationWarning>
-        <LayoutClient>{children}</LayoutClient>
-        <Toaster
-          theme="dark"
-          position="top-center"
-          toastOptions={{
-            style: { background: '#0D1F0D', border: '1px solid rgba(76,175,114,0.25)', color: '#E8F5E9' },
-          }}
-        />
-      </body>
+       <body className="font-sans antialiased" suppressHydrationWarning>
+         <LayoutClient>{children}</LayoutClient>
+         <footer className="flex justify-center py-3">
+           <span className="text-[10px] text-white/25 tracking-wide">Powered by Algoplus</span>
+         </footer>
+         <Toaster
+           theme="dark"
+           position="top-center"
+           toastOptions={{
+             style: { background: '#0D1F0D', border: '1px solid rgba(76,175,114,0.25)', color: '#E8F5E9' },
+           }}
+         />
+       </body>
     </html>
   );
 }

@@ -123,14 +123,25 @@ export default function GenerationSeedPage() {
   const [error, setError] = useState('');
   const [createdMap, setCreatedMap] = useState<Record<string, CreatedMember>>({});
 
-  // On mount: if Gen 1 members already exist in DB, lock Gen 1 tab
+    // On mount: if Gen 1/2 members already exist in DB, load them
   useEffect(() => {
-    fetch('/api/members?generation=1&limit=1')
+    fetch('/api/members?generation=1')
       .then(r => r.ok ? r.json() : [])
       .then((data: any[]) => {
         if (data.length > 0) {
           setGen1Locked(true);
           setGen1(data.map((m: any) => ({ id: String(m.id), fullName: m.fullName, gender: m.gender })));
+          setGen1Forms(data.map(() => emptyMember()));
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/members?generation=2')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: any[]) => {
+        if (data.length > 0) {
+          setGen2(data.map((m: any) => ({ id: String(m.id), fullName: m.fullName, gender: m.gender })));
+          setGen2Forms(data.map(() => emptyMember()));
         }
       })
       .catch(() => {});
@@ -588,16 +599,26 @@ export default function GenerationSeedPage() {
             <Link href="/admin" className="flex-1 py-3 rounded-xl glass text-white text-sm font-medium text-center hover:bg-white/10 transition-all">
               Cancel
             </Link>
-            <button onClick={() => handleCreateGen1(false)} disabled={loadingIds.has('gen1') || gen1Locked}
-              className="flex-1 py-3 rounded-xl bg-white/10 text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-white/20 transition-all disabled:opacity-50">
-              {loadingIds.has('gen1') ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Save Gen 1
-            </button>
-            <button onClick={() => handleCreateGen1(true)} disabled={loadingIds.has('gen1') || gen1Locked}
-              className="flex-1 py-3 rounded-xl bg-purple-500 text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-purple-600 transition-all disabled:opacity-50">
-              {loadingIds.has('gen1') ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
-              Save & Continue
-            </button>
+            {gen1Locked ? (
+              <button onClick={() => { setStep(2); setGen2Forms([emptyMember()]); }}
+                className="flex-[2] py-3 rounded-xl bg-purple-500 text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-purple-600 transition-all">
+                <ChevronRight className="w-4 h-4" />
+                Continue to Gen 2
+              </button>
+            ) : (
+              <>
+                <button onClick={() => handleCreateGen1(false)} disabled={loadingIds.has('gen1')}
+                  className="flex-1 py-3 rounded-xl bg-white/10 text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-white/20 transition-all disabled:opacity-50">
+                  {loadingIds.has('gen1') ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Save Gen 1
+                </button>
+                <button onClick={() => handleCreateGen1(true)} disabled={loadingIds.has('gen1')}
+                  className="flex-1 py-3 rounded-xl bg-purple-500 text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-purple-600 transition-all disabled:opacity-50">
+                  {loadingIds.has('gen1') ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
+                  Save & Continue
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

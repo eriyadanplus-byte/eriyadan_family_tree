@@ -124,7 +124,7 @@ export default function AdminMembersPage() {
             <h2 className="text-3xl font-display text-white">Members Management</h2>
             <p className="text-on-surface-variant text-sm">Manage all family lineage members</p>
           </div>
-          <Link href="/tree/add" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 text-white hover:shadow-[0_0_20px_rgba(123,97,255,0.5)] transition-all">
+          <Link href="/admin/add-member" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 text-white hover:shadow-[0_0_20px_rgba(123,97,255,0.5)] transition-all">
             <Plus className="w-4 h-4" />
             <span>Add Member</span>
           </Link>

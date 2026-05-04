@@ -94,11 +94,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </aside>
             </>
           )}
-          <main className="flex-1 min-h-[calc(100vh-4rem)] overflow-auto overflow-x-hidden">
+           <main className="flex-1 min-h-[calc(100vh-4rem)] overflow-auto overflow-x-hidden">
             {children}
-            <footer className="flex justify-center py-3">
-              <span className="text-[10px] text-white/25 tracking-wide">Powered by Algoplus</span>
-            </footer>
           </main>
         </div>
       </div>
@@ -112,13 +109,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <div className="pt-14 md:pt-16">
         <InAppBanner />
       </div>
-      <main className="flex-1 pb-20 md:pb-6">{children}</main>
-      <div className="md:hidden">
-        <MobileBottomNav />
-      </div>
-      <footer className="hidden md:flex justify-center pb-3">
-        <span className="text-[10px] text-white/25 tracking-wide">Powered by Algoplus</span>
-      </footer>
-    </div>
-  );
-}
+       <main className="flex-1 pb-20 md:pb-6">{children}</main>
+       <div className="md:hidden">
+         <MobileBottomNav />
+       </div>
+     </div>
+   );
+ }
