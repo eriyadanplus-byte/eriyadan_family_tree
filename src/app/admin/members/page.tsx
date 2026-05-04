@@ -182,7 +182,7 @@ export default function AdminMembersPage() {
                   </td>
                   <td className="px-3 py-3">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${getRoleBadge(member.role).bg}`}>
-                      {member.role.replace('_', ' ')}
+                      {(member.role || 'viewer').replace('_', ' ')}
                     </span>
                   </td>
                   <td className="px-3 py-3">

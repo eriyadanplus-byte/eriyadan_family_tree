@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Plus, TreeDeciduous, AlertCircle, Trash2, ChevronRight, Camera } from 'lucide-react';
 import { uploadAvatar } from '@/lib/image';
+import AncestorSearch, { type AncestorResult } from '@/components/AncestorSearch';
 
 interface CreatedMember {
   id: string;
@@ -12,6 +13,9 @@ interface CreatedMember {
   gender?: string;
   photoUploaded?: boolean;
   spouseId?: string;
+  generation?: number;
+  fatherId?: string;
+  motherId?: string;
 }
 
 interface MemberForm {
@@ -25,6 +29,7 @@ interface MemberForm {
   bio: string;
   isLate: boolean;
   parentId: string;
+  parentAncestor: AncestorResult | null;  // Full ancestor data (for couple detection)
   addSpouse: boolean;
   spouseName: string;
   spouseMobile: string;
@@ -37,11 +42,15 @@ interface MemberForm {
   spousePhotoFile: File | null;
   spousePhotoPreview: string;
   spouseGenderTouched: boolean;
+  generation?: number;
+  fatherId?: string;
+  motherId?: string;
 }
 
 const emptyMember = (): MemberForm => ({
   fullName: '', mobileNumber: '', email: '', gender: '', dob: '', dod: '',
   location: '', bio: '', isLate: false, parentId: '',
+  parentAncestor: null,
   addSpouse: false, spouseName: '', spouseMobile: '', spouseGender: '',
   spouseIsLate: false, spouseDob: '', spouseDod: '',
   photoFile: null, photoPreview: '',
@@ -115,6 +124,7 @@ export default function GenerationSeedPage() {
   const [step, setStep] = useState(1);
   const [gen1, setGen1] = useState<CreatedMember[]>([]);
   const [gen2, setGen2] = useState<CreatedMember[]>([]);
+  const [gen3, setGen3] = useState<CreatedMember[]>([]);
   const [gen1Forms, setGen1Forms] = useState<MemberForm[]>([emptyMember()]);
   const [gen2Forms, setGen2Forms] = useState<MemberForm[]>([emptyMember()]);
   const [gen3Forms, setGen3Forms] = useState<MemberForm[]>([emptyMember()]);
@@ -122,16 +132,25 @@ export default function GenerationSeedPage() {
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
   const [createdMap, setCreatedMap] = useState<Record<string, CreatedMember>>({});
+  const [editingMember, setEditingMember] = useState<CreatedMember | null>(null);
+  const [editForm, setEditForm] = useState<Partial<MemberForm>>({});
 
-    // On mount: if Gen 1/2 members already exist in DB, load them
+    // On mount: if Gen 1/2/3 members already exist in DB, load them
   useEffect(() => {
     fetch('/api/members?generation=1')
       .then(r => r.ok ? r.json() : [])
       .then((data: any[]) => {
         if (data.length > 0) {
           setGen1Locked(true);
-          setGen1(data.map((m: any) => ({ id: String(m.id), fullName: m.fullName, gender: m.gender })));
+          const members = data.map((m: any) => ({ id: String(m.id), fullName: m.fullName, gender: m.gender, generation: 1, fatherId: m.fatherId, motherId: m.motherId }));
+          setGen1(members);
           setGen1Forms(data.map(() => emptyMember()));
+          // Add to createdMap for display in summary
+          setCreatedMap(prev => {
+            const next = { ...prev };
+            members.forEach(m => next[m.id] = m);
+            return next;
+          });
         }
       })
       .catch(() => {});
@@ -140,8 +159,32 @@ export default function GenerationSeedPage() {
       .then(r => r.ok ? r.json() : [])
       .then((data: any[]) => {
         if (data.length > 0) {
-          setGen2(data.map((m: any) => ({ id: String(m.id), fullName: m.fullName, gender: m.gender })));
+          const members = data.map((m: any) => ({ id: String(m.id), fullName: m.fullName, gender: m.gender, generation: 2, fatherId: m.fatherId, motherId: m.motherId }));
+          setGen2(members);
           setGen2Forms(data.map(() => emptyMember()));
+          // Add to createdMap for display in summary
+          setCreatedMap(prev => {
+            const next = { ...prev };
+            members.forEach(m => next[m.id] = m);
+            return next;
+          });
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/members?generation=3')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: any[]) => {
+        if (data.length > 0) {
+          const members = data.map((m: any) => ({ id: String(m.id), fullName: m.fullName, gender: m.gender, generation: 3, fatherId: m.fatherId, motherId: m.motherId }));
+          setGen3(members);
+          setGen3Forms(data.map(() => emptyMember()));
+          // Add to createdMap for display in summary
+          setCreatedMap(prev => {
+            const next = { ...prev };
+            members.forEach(m => next[m.id] = m);
+            return next;
+          });
         }
       })
       .catch(() => {});
@@ -200,6 +243,46 @@ export default function GenerationSeedPage() {
       });
     } catch (err) {
       console.error('Photo upload failed for', memberId, err);
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!editingMember) return;
+    setError('');
+    try {
+      const body: any = {};
+      if (editForm.fullName !== undefined) body.fullName = editForm.fullName;
+      if (editForm.gender !== undefined) body.gender = editForm.gender;
+      if (editForm.generation !== undefined) body.generation = editForm.generation;
+      if (editForm.fatherId !== undefined) body.fatherId = editForm.fatherId || null;
+      if (editForm.motherId !== undefined) body.motherId = editForm.motherId || null;
+
+      const res = await fetch(`/api/members/${editingMember.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || 'Failed to update member');
+      }
+      const updated = await res.json();
+      setCreatedMap(prev => {
+        const entry = prev[updated.id];
+        return {
+          ...prev,
+          [updated.id]: {
+            ...entry,
+            fullName: updated.fullName || entry?.fullName,
+            gender: updated.gender || entry?.gender,
+            generation: updated.generation || entry?.generation,
+          }
+        };
+      });
+      setEditingMember(null);
+      setEditForm({});
+    } catch (err: any) {
+      setError(err.message || 'Failed to update member');
     }
   };
 
@@ -270,12 +353,36 @@ export default function GenerationSeedPage() {
       for (const f of validForms) {
         const parent = gen1.find(g => g.id === f.parentId);
         const isFather = parent?.gender === 'male';
+        
+        // Check if selected ancestor is a couple (has spouseId)
+        const isCouple = !!f.parentAncestor?.spouseId;
+        let fatherId: string | undefined;
+        let motherId: string | undefined;
+        
+        if (isCouple) {
+          // Couple selected: determine father/mother from the primary member's gender
+          const primaryId = f.parentAncestor!.id;
+          const spouseId = f.parentAncestor!.spouseId!;
+          if (f.parentAncestor!.gender === 'male') {
+            fatherId = primaryId;
+            motherId = spouseId;
+          } else {
+            motherId = primaryId;
+            fatherId = spouseId;
+          }
+        } else {
+          // Single parent: use gender to assign to father or mother
+          fatherId = isFather ? f.parentId : undefined;
+          motherId = isFather ? undefined : f.parentId;
+        }
+        
         const member = await createMember({
           fullName: f.fullName, mobileNumber: f.mobileNumber, email: f.email || null,
           gender: f.gender || null, dob: f.dob || null, dod: f.dod || null,
           location: f.location || null, bio: f.bio || null,
           isLate: f.isLate, generation: 2,
-          ...(isFather ? { fatherId: f.parentId } : { motherId: f.parentId }),
+          ...(fatherId ? { fatherId } : {}),
+          ...(motherId ? { motherId } : {}),
         }, m => setGen2(prev => [...prev, m]), 2);
         setCreatedMap(prev => ({ ...prev, [member.id]: member }));
         await tryUploadPhoto(member.id, f.photoFile);
@@ -289,6 +396,21 @@ export default function GenerationSeedPage() {
           }, m => setGen2(prev => [...prev, m]), 2);
           setCreatedMap(prev => ({ ...prev, [spouse.id]: spouse }));
           await tryUploadPhoto(spouse.id, f.spousePhotoFile);
+
+          // Auto-set both parent IDs for the couple
+          const memberFatherId = isFather ? f.parentId : spouse.id;
+          const memberMotherId = isFather ? spouse.id : f.parentId;
+          await fetch(`/api/members/${member.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fatherId: memberFatherId, motherId: memberMotherId }),
+          });
+          await fetch(`/api/members/${spouse.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fatherId: memberFatherId, motherId: memberMotherId }),
+          });
+
           try {
             await linkSpouses(member.id, spouse.id);
           } catch (linkErr: any) {
@@ -324,13 +446,37 @@ export default function GenerationSeedPage() {
       for (const f of validForms) {
         const parent = gen2.find(g => g.id === f.parentId);
         const isFather = parent?.gender === 'male';
+        
+        // Check if selected ancestor is a couple (has spouseId)
+        const isCouple = !!f.parentAncestor?.spouseId;
+        let fatherId: string | undefined;
+        let motherId: string | undefined;
+        
+        if (isCouple) {
+          // Couple selected: determine father/mother from the primary member's gender
+          const primaryId = f.parentAncestor!.id;
+          const spouseId = f.parentAncestor!.spouseId!;
+          if (f.parentAncestor!.gender === 'male') {
+            fatherId = primaryId;
+            motherId = spouseId;
+          } else {
+            motherId = primaryId;
+            fatherId = spouseId;
+          }
+        } else {
+          // Single parent: use gender to assign to father or mother
+          fatherId = isFather ? f.parentId : undefined;
+          motherId = isFather ? undefined : f.parentId;
+        }
+        
         const member = await createMember({
           fullName: f.fullName, mobileNumber: f.mobileNumber, email: f.email || null,
           gender: f.gender || null, dob: f.dob || null, dod: f.dod || null,
           location: f.location || null, bio: f.bio || null,
           isLate: f.isLate, generation: 3,
-          ...(isFather ? { fatherId: f.parentId } : { motherId: f.parentId }),
-        }, m => setGen2(prev => [...prev, m]), 3);
+          ...(fatherId ? { fatherId } : {}),
+          ...(motherId ? { motherId } : {}),
+        }, m => setGen3(prev => [...prev, m]), 3);
         setCreatedMap(prev => ({ ...prev, [member.id]: member }));
         await tryUploadPhoto(member.id, f.photoFile);
 
@@ -340,9 +486,24 @@ export default function GenerationSeedPage() {
             fullName: f.spouseName, mobileNumber: f.spouseMobile,
             gender: f.spouseGender || null, dob: f.spouseDob || null, dod: f.spouseDod || null,
             isLate: f.spouseIsLate, generation: 3,
-          }, m => setGen2(prev => [...prev, m]), 3);
+          }, m => setGen3(prev => [...prev, m]), 3);
           setCreatedMap(prev => ({ ...prev, [spouse.id]: spouse }));
           await tryUploadPhoto(spouse.id, f.spousePhotoFile);
+
+          // Auto-set both parent IDs for the couple
+          const memberFatherId = isFather ? f.parentId : spouse.id;
+          const memberMotherId = isFather ? spouse.id : f.parentId;
+          await fetch(`/api/members/${member.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fatherId: memberFatherId, motherId: memberMotherId }),
+          });
+          await fetch(`/api/members/${spouse.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fatherId: memberFatherId, motherId: memberMotherId }),
+          });
+
           try {
             await linkSpouses(member.id, spouse.id);
           } catch (linkErr: any) {
@@ -442,12 +603,12 @@ export default function GenerationSeedPage() {
       {generation > 1 && (
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(232,245,233,0.45)' }}>Parent (Gen {generation - 1}) *</label>
-          <select value={form.parentId} onChange={e => update({ parentId: e.target.value })} required className="glass-input">
-            <option value="">Select parent</option>
-            {getSpousePeggedParents(parentOptions, createdMap).map(p => (
-              <option key={p.id} value={p.id}>{p.fullName}{p.spouseId ? ' (with spouse)' : ''}</option>
-            ))}
-          </select>
+          <AncestorSearch
+            value={form.parentAncestor}
+            onChange={(ancestor) => update({ parentId: ancestor?.id || '', parentAncestor: ancestor })}
+            apiEndpoint="/api/auth/signup/search"
+            placeholder="Search parent by name…"
+          />
         </div>
       )}
       <label className="flex items-center gap-3 cursor-pointer">
@@ -575,19 +736,42 @@ export default function GenerationSeedPage() {
 
               <div className="grid gap-3">
                 {gen1.map((member) => (
-                  <Link
+                  <div
                     key={member.id}
-                    href={`/profile/${member.id}`}
                     className="glass-card p-4 rounded-2xl border border-white/10 hover:border-emerald-400/30 transition-all"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <div>
+                      <Link
+                        href={`/profile/${member.id}`}
+                        className="flex-1"
+                      >
                         <p className="font-semibold text-white">{member.fullName}</p>
                         <p className="text-[11px] text-white/50">Gen 1 · {member.gender ? member.gender : 'Unknown'}</p>
+                      </Link>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingMember(member);
+                            setEditForm({
+                              fullName: member.fullName,
+                              gender: (member.gender as 'male' | 'female' | 'other') || '',
+                              generation: member.generation,
+                              fatherId: member.fatherId || '',
+                              motherId: member.motherId || '',
+                            });
+                          }}
+                          className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                          title="Edit member"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9-3z" />
+                          </svg>
+                        </button>
+                        <span className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Founder</span>
                       </div>
-                      <span className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Founder</span>
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             </div>
@@ -626,7 +810,11 @@ export default function GenerationSeedPage() {
       {/* Step 2: Gen 2 */}
       {step === 2 && (
         <div className="space-y-6">
-          {gen2Forms.map((form, idx) => renderMemberFields(form, idx, patch => updateForm(gen2Forms, setGen2Forms, idx, patch), 2, gen1, gen2Forms, setGen2Forms))}
+          {gen2Forms.map((form, idx) => (
+            <div key={idx}>
+              {renderMemberFields(form, idx, patch => updateForm(gen2Forms, setGen2Forms, idx, patch), 2, gen1, gen2Forms, setGen2Forms)}
+            </div>
+          ))}
           <button onClick={() => addRow(gen2Forms, setGen2Forms)}
             className="w-full py-3 rounded-xl glass text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-white/10 transition-all border-dashed border-white/10">
             <Plus className="w-4 h-4" /> Add Another Gen 2 Member
@@ -653,7 +841,11 @@ export default function GenerationSeedPage() {
       {/* Step 3: Gen 3 */}
       {step === 3 && (
         <div className="space-y-6">
-          {gen3Forms.map((form, idx) => renderMemberFields(form, idx, patch => updateForm(gen3Forms, setGen3Forms, idx, patch), 3, gen2, gen3Forms, setGen3Forms))}
+          {gen3Forms.map((form, idx) => (
+            <div key={idx}>
+              {renderMemberFields(form, idx, patch => updateForm(gen3Forms, setGen3Forms, idx, patch), 3, gen2, gen3Forms, setGen3Forms)}
+            </div>
+          ))}
           <button onClick={() => addRow(gen3Forms, setGen3Forms)}
             className="w-full py-3 rounded-xl glass text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-white/10 transition-all border-dashed border-white/10">
             <Plus className="w-4 h-4" /> Add Another Gen 3 Member
@@ -684,23 +876,38 @@ export default function GenerationSeedPage() {
           <p className="text-xs text-white/40">You can edit member details or delete members before finishing setup.</p>
           <div className="space-y-3">
             {[1, 2, 3].map(gen => {
-              const members = Object.values(createdMap).filter(m => {
-                const memberData = gen1.includes(m) ? 1 : gen2.includes(m) ? 2 : 3;
-                return memberData === gen;
-              });
+              const members = Object.values(createdMap).filter(m => m.generation === gen);
               if (members.length === 0) return null;
               return (
                 <div key={gen} className="glass-card p-4 rounded-xl">
                   <h4 className="text-xs font-bold text-white/60 uppercase mb-2">Gen {gen}</h4>
                   <div className="flex flex-wrap gap-2">
                     {members.map(m => (
-                      <Link
+                      <div
                         key={m.id}
-                        href={`/profile/${m.id}`}
-                        className="px-3 py-1.5 rounded-lg bg-white/5 text-xs text-white/80 hover:bg-white/10 transition-all"
+                        className="px-3 py-1.5 rounded-lg bg-white/5 text-xs text-white/80 flex items-center gap-2"
                       >
-                        {m.fullName} {m.gender ? `(${m.gender})` : ''}
-                      </Link>
+                        <span>{m.fullName} {m.gender ? `(${m.gender})` : ''}</span>
+                        <button
+                          onClick={() => {
+                            setEditingMember(m);
+                            setEditForm({
+                              fullName: m.fullName,
+                              gender: (m.gender as 'male' | 'female' | 'other') || '',
+                              generation: m.generation,
+                              fatherId: m.fatherId || '',
+                              motherId: m.motherId || '',
+                            });
+                          }}
+                          className="p-1 rounded hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                          title="Edit member"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4H4a2 2 0 0 0 0 2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9-3z" />
+                          </svg>
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -728,6 +935,117 @@ export default function GenerationSeedPage() {
             {Object.values(createdMap).filter(m => !m.photoUploaded).map(m => (
               <span key={m.id} className="px-3 py-1.5 rounded-lg glass text-xs text-white/60">{m.fullName}</span>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Member Modal */}
+      {editingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.70)', backdropFilter: 'blur(8px)' }}>
+          <div className="w-full max-w-lg glass-card p-6 rounded-3xl relative">
+            <button
+              onClick={() => { setEditingMember(null); setEditForm({}); }}
+              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h3 className="text-lg font-bold text-white mb-4">Edit Member</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+                  style={{ color: 'rgba(232,245,233,0.50)' }}>Full Name</label>
+                <input
+                  type="text"
+                  value={editForm.fullName || ''}
+                  onChange={e => setEditForm(f => ({ ...f, fullName: e.target.value }))}
+                  className="glass-input"
+                  placeholder="Full name"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+                  style={{ color: 'rgba(232,245,233,0.50)' }}>Gender</label>
+                <select
+                  value={editForm.gender || ''}
+                  onChange={e => setEditForm(f => ({ ...f, gender: e.target.value as any }))}
+                  className="glass-input"
+                >
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+                  style={{ color: 'rgba(232,245,233,0.50)' }}>Generation</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={editForm.generation || ''}
+                  onChange={e => setEditForm(f => ({ ...f, generation: parseInt(e.target.value) || undefined }))}
+                  className="glass-input"
+                  placeholder="Generation number"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+                  style={{ color: 'rgba(232,245,233,0.50)' }}>Father</label>
+                <AncestorSearch
+                  value={editForm.fatherId ? {
+                    id: editForm.fatherId,
+                    fullName: Object.values(createdMap).find(m => m.id === editForm.fatherId)?.fullName || '',
+                    generation: editForm.generation || 0,
+                    isLate: false,
+                    isStub: false,
+                  } : null}
+                  onChange={(ancestor) => setEditForm(f => ({ ...f, fatherId: ancestor?.id || '' }))}
+                  apiEndpoint="/api/auth/signup/search"
+                  placeholder="Search father by name…"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5"
+                  style={{ color: 'rgba(232,245,233,0.50)' }}>Mother</label>
+                <AncestorSearch
+                  value={editForm.motherId ? {
+                    id: editForm.motherId,
+                    fullName: Object.values(createdMap).find(m => m.id === editForm.motherId)?.fullName || '',
+                    generation: editForm.generation || 0,
+                    isLate: false,
+                    isStub: false,
+                  } : null}
+                  onChange={(ancestor) => setEditForm(f => ({ ...f, motherId: ancestor?.id || '' }))}
+                  apiEndpoint="/api/auth/signup/search"
+                  placeholder="Search mother by name…"
+                />
+              </div>
+              {error && (
+                <div className="flex items-center gap-3 p-3 rounded-xl text-sm"
+                  style={{ background: 'rgba(239,83,80,0.10)', border: '1px solid rgba(239,83,80,0.20)', color: '#EF5350' }}>
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setEditingMember(null); setEditForm({}); }}
+                  className="flex-1 py-3 rounded-xl glass text-white text-sm font-medium text-center hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEditSave}
+                  className="flex-[2] py-3 rounded-xl bg-purple-500 text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-purple-600 transition-all"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -165,7 +165,7 @@ export default function SearchPage() {
                   </div>
                 </div>
                 <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${getRoleBadge(member.role).bg} border`}>
-                  {member.role.replace('_', ' ')}
+                  {(member.role || 'viewer').replace('_', ' ')}
                 </span>
               </div>
             </Link>

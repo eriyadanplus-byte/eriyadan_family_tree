@@ -254,7 +254,18 @@ function AdminLineageForm({ targetMemberId }: { targetMemberId: string | null })
       ? `/api/admin/lineage?memberId=${encodeURIComponent(targetMemberId)}`
       : '/api/admin/lineage';
     const controller = new AbortController();
-    safeJson<LineageData>(url, controller.signal)
+    fetch(url, { signal: controller.signal })
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(err => {
+            const errorMsg = err.error || 'Failed to load member profile';
+            setError(`Error: ${errorMsg}`);
+            setLoading(false);
+            throw new Error(errorMsg);
+          });
+        }
+        return res.json();
+      })
       .then(d => {
         if (!d) {
           setError('Failed to load member profile.');
@@ -276,9 +287,14 @@ function AdminLineageForm({ targetMemberId }: { targetMemberId: string | null })
         if (d.spouseId) setSpouse({ id: d.spouseId, name: d.spouseName || '' });
         setLoading(false);
       })
-      .catch(() => {
-        setError('Failed to load member profile.');
-        setLoading(false);
+      .catch(error => {
+        if (error.name !== 'AbortError') {
+          // Use the error from the above .then() block
+          if (!error.message.includes('Error:')) {
+            setError(`Failed to load member profile: ${error.message}`);
+          }
+          setLoading(false);
+        }
       });
     return () => controller.abort();
   }, [targetMemberId]);

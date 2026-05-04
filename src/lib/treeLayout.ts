@@ -213,41 +213,45 @@ export function computeLayout(
   members.forEach(child => {
     const fatherId = child.fatherId ? String(child.fatherId) : null;
     const motherId = child.motherId ? String(child.motherId) : null;
-    const parentIds: string[] = [];
-    if (fatherId && memberMap.has(fatherId)) parentIds.push(fatherId);
-    if (motherId && memberMap.has(motherId) && motherId !== fatherId)
-      parentIds.push(motherId);
-
     const bothParentsInTree = fatherId && memberMap.has(fatherId) && motherId && memberMap.has(motherId);
 
-    parentIds.forEach(parentId => {
-      const edgeKey = `${parentId}->${child.id}`;
-      if (addedEdges.has(edgeKey)) return;
-      addedEdges.add(edgeKey);
+    // When both parents exist in tree, create only ONE edge from father;
+    // the render code will draw from couple midpoint. Otherwise use whichever parent exists.
+    let sourceParentId: string | null = null;
+    if (bothParentsInTree) {
+      sourceParentId = fatherId;
+    } else if (fatherId && memberMap.has(fatherId)) {
+      sourceParentId = fatherId;
+    } else if (motherId && memberMap.has(motherId)) {
+      sourceParentId = motherId;
+    }
 
-      const parentNode = memberMap.get(parentId)!;
-      const spouseEdge = edges.find(
-        e => e.type === 'spouse' && (e.source === parentId || e.target === parentId)
-      );
-      // Prefer drawing from the male partner of the couple, but only if he is rendered
-      let sourceId = parentId;
-      if (spouseEdge && spouseEdge.source !== parentId && memberMap.has(spouseEdge.source)) {
-        sourceId = spouseEdge.source;
-      }
+    if (!sourceParentId) return;
 
-      const edgeId = `pc-${sourceId}-${child.id}`;
-      if (edges.some(e => e.id === edgeId)) return;
+    const edgeKey = `${sourceParentId}->${child.id}`;
+    if (addedEdges.has(edgeKey)) return;
+    addedEdges.add(edgeKey);
 
-      const genDiff = child.generation - parentNode.generation;
-      const label = bothParentsInTree && genDiff === 1 ? 'Parents' : getRelationLabel(parentNode, child.generation, members);
+    const parentNode = memberMap.get(sourceParentId)!;
+    const spouseEdge = edges.find(
+      e => e.type === 'spouse' && (e.source === sourceParentId || e.target === sourceParentId)
+    );
 
-      edges.push({
-        id:     edgeId,
-        source: sourceId,
-        target: child.id,
-        type:   'parent-child',
-        label,
-      });
+    // Use source parent as the edge source; render will detect spouse and draw from midpoint
+    let sourceId = sourceParentId;
+
+    const edgeId = `pc-${sourceId}-${child.id}`;
+    if (edges.some(e => e.id === edgeId)) return;
+
+    const genDiff = child.generation - parentNode.generation;
+    const label = bothParentsInTree && genDiff === 1 ? 'Parents' : getRelationLabel(parentNode, child.generation, members);
+
+    edges.push({
+      id:     edgeId,
+      source: sourceId,
+      target: child.id,
+      type:   'parent-child',
+      label,
     });
   });
 

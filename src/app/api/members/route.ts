@@ -16,7 +16,7 @@ function mapMember(row: any) {
     isOnline:      !!row.is_online,
     birthYear:     row.birth_year,
     deathYear:     row.death_year,
-    role:          row.role,
+    role:          row.role || 'viewer',
     profilePhotoUrl: row.profile_photo_url,
     gender:        row.gender,
     dob:           row.dob,

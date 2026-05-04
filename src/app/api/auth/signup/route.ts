@@ -65,6 +65,8 @@ export async function POST(request: NextRequest) {
           let updateNeeded = false;
           let fatherId = stub.father_id ? String(stub.father_id) : null;
           let motherId = stub.mother_id ? String(stub.mother_id) : null;
+
+          // If only one parent exists, try to get spouse to fill the other
           if (fatherId && !motherId) {
             const spouse = await getSpouse(fatherId);
             if (spouse) { motherId = String(spouse.id); updateNeeded = true; }
@@ -72,6 +74,23 @@ export async function POST(request: NextRequest) {
             const spouse = await getSpouse(motherId);
             if (spouse) { fatherId = String(spouse.id); updateNeeded = true; }
           }
+
+          // If member has no parents but is a spouse, set parent from the spouse's family
+          if (!fatherId && !motherId && relationType === 'spouse' && ancestorId) {
+            const spouseRows = await query(
+              'SELECT father_id, mother_id FROM members WHERE id = ? AND deleted_at IS NULL',
+              [ancestorId]
+            ) as any[];
+            if (spouseRows.length) {
+              const spouseParent = spouseRows[0];
+              if (spouseParent.father_id || spouseParent.mother_id) {
+                fatherId = spouseParent.father_id ? String(spouseParent.father_id) : null;
+                motherId = spouseParent.mother_id ? String(spouseParent.mother_id) : null;
+                updateNeeded = true;
+              }
+            }
+          }
+
           if (updateNeeded) {
             await query(
               'UPDATE members SET father_id = ?, mother_id = ? WHERE id = ?',
