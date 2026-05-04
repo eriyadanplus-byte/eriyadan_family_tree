@@ -22,7 +22,7 @@ interface Props {
 }
 
 const NODE_W = 140;
-const NODE_H = 130;
+const NODE_H = 170;
 
 // Stitch reference palette — warm tones matching the design mockups
 const GEN_COLORS: Record<number, { bg: string; border: string; text: string; avatar: string }> = {
@@ -260,7 +260,7 @@ export default function DesktopTree({
             }} title={member?.isLate ? 'Deceased' : member?.isOnline ? 'Online' : 'Offline (inactive > 10 min)'} />
           </div>
 
-          <div className="absolute left-4 right-4 bottom-10 rounded-2xl px-3 py-2"
+          <div className="absolute left-4 right-4 bottom-2 rounded-2xl px-3 py-2"
             style={{
               background: 'rgba(13,31,13,0.92)',
               border: '1px solid rgba(255,255,255,0.08)',

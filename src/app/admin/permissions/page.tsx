@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, User, Loader2, Check, MessageCircle, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { User, Loader2, Check, MessageCircle } from 'lucide-react';
 
 interface UserRecord {
   id: string;
@@ -12,21 +12,6 @@ interface UserRecord {
   memberId: string | null;
   memberName: string | null;
   createdAt: string;
-}
-
-interface Scope {
-  id: string;
-  user_id: string;
-  root_member_id: string;
-  user_name: string;
-  user_email: string;
-  root_member_name: string;
-}
-
-interface Member {
-  id: string;
-  full_name: string;
-  generation: number;
 }
 
 const rolePermissions: Record<string, { canAdd: boolean; canEdit: boolean; canDelete: boolean; canExport: boolean }> = {
@@ -51,20 +36,9 @@ export default function AdminPermissionsPage() {
   const [grantIdMap, setGrantIdMap] = useState<Record<string, number>>({});
   const [togglingGrant, setTogglingGrant] = useState<string | null>(null);
 
-  // Approval scopes state
-  const [scopes, setScopes] = useState<Scope[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [selectedEditor, setSelectedEditor] = useState('');
-  const [selectedRoot, setSelectedRoot] = useState('');
-  const [memberSearch, setMemberSearch] = useState('');
-  const [savingScope, setSavingScope] = useState(false);
-  const [scopeError, setScopeError] = useState('');
-  const [scopeSuccess, setScopeSuccess] = useState('');
-
   useEffect(() => {
     fetchUsers();
     fetchGrants();
-    loadScopes();
   }, []);
 
   const fetchGrants = async () => {
@@ -141,75 +115,11 @@ export default function AdminPermissionsPage() {
     }
   };
 
-  const loadScopes = async () => {
-    try {
-      const [scopesRes, membersRes] = await Promise.all([
-        fetch('/api/admin/approval-scopes'),
-        fetch('/api/members'),
-      ]);
-      if (scopesRes.ok) {
-        const data = await scopesRes.json();
-        setScopes(data.scopes || []);
-      }
-      if (membersRes.ok) {
-        const data = await membersRes.json();
-        setMembers(Array.isArray(data) ? data : []);
-      }
-    } catch {
-      // non-fatal
-    }
-  };
-
-  const handleAddScope = async () => {
-    if (!selectedEditor || !selectedRoot) {
-      setScopeError('Select both an editor and a root member');
-      return;
-    }
-    setSavingScope(true);
-    setScopeError('');
-    try {
-      const res = await fetch('/api/admin/approval-scopes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: selectedEditor, rootMemberId: selectedRoot }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
-      setScopeSuccess('Approval scope added');
-      setSelectedEditor('');
-      setSelectedRoot('');
-      setMemberSearch('');
-      loadScopes();
-      setTimeout(() => setScopeSuccess(''), 3000);
-    } catch (err: any) {
-      setScopeError(err.message || 'Failed to add scope');
-    } finally {
-      setSavingScope(false);
-    }
-  };
-
-  const handleDeleteScope = async (scopeId: string) => {
-    if (!confirm('Remove this approval scope?')) return;
-    try {
-      const res = await fetch('/api/admin/approval-scopes', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scopeId }),
-      });
-      if (res.ok) setScopes(prev => prev.filter(s => s.id !== scopeId));
-    } catch {}
-  };
-
-  const editors = users.filter(u => u.role === 'editor');
-  const filteredMembers = members.filter(m =>
-    !memberSearch || m.full_name?.toLowerCase().includes(memberSearch.toLowerCase())
-  );
-
   return (
     <div className="p-8 lg:p-12">
       <header className="mb-8">
         <h2 className="text-3xl font-display text-white">Permissions</h2>
-        <p className="text-on-surface-variant text-sm">Manage user access, roles, and approval scopes</p>
+        <p className="text-on-surface-variant text-sm">Manage user access and roles</p>
       </header>
 
       {/* Role Management table */}
@@ -333,83 +243,6 @@ export default function AdminPermissionsPage() {
             <p className="text-white/40 text-xs mt-1">Read-only access to the family tree</p>
           </div>
         </div>
-      </div>
-
-      {/* Editor Approval Scopes */}
-      <div className="glass-card p-6 rounded-2xl mt-6">
-        <div className="flex items-center gap-3 mb-1">
-          <Shield className="w-5 h-5 text-emerald-400" />
-          <h4 className="text-lg font-display text-white">Editor Approval Scopes</h4>
-        </div>
-        <p className="text-xs text-white/40 mb-5">Assign subtree roots to editors — they can only approve signups within their assigned subtree</p>
-
-        {scopeError && (
-          <div className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm"
-            style={{ background: 'rgba(239,83,80,0.10)', border: '1px solid rgba(239,83,80,0.20)', color: '#EF5350' }}>
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />{scopeError}
-          </div>
-        )}
-        {scopeSuccess && (
-          <div className="p-3 rounded-xl mb-4 text-sm"
-            style={{ background: 'rgba(76,175,114,0.10)', border: '1px solid rgba(76,175,114,0.20)', color: '#81C784' }}>
-            {scopeSuccess}
-          </div>
-        )}
-
-        {/* Add scope form */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-white/50">Editor</label>
-            <select value={selectedEditor} onChange={e => setSelectedEditor(e.target.value)}
-              className="glass-input w-full">
-              <option value="">Select editor</option>
-              {editors.map(e => (
-                <option key={e.id} value={e.id}>{e.name || e.email}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-white/50">Subtree Root Member</label>
-            <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)}
-              className="glass-input w-full mb-2" placeholder="Search members…" />
-            <select value={selectedRoot} onChange={e => setSelectedRoot(e.target.value)}
-              className="glass-input w-full">
-              <option value="">Select root member</option>
-              {filteredMembers.slice(0, 20).map(m => (
-                <option key={m.id} value={m.id}>{m.full_name} (Gen {m.generation})</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <button onClick={handleAddScope} disabled={savingScope || !selectedEditor || !selectedRoot}
-          className="flex items-center gap-2 px-5 py-2 rounded-full font-bold text-sm text-white disabled:opacity-50 mb-6"
-          style={{ background: 'linear-gradient(135deg,#4CAF72,#2E7D32)' }}>
-          {savingScope ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-          Add Scope
-        </button>
-
-        {/* Current scopes list */}
-        {scopes.length === 0 ? (
-          <p className="text-sm text-white/30">No approval scopes configured.</p>
-        ) : (
-          <div className="space-y-2">
-            {scopes.map(s => (
-              <div key={s.id} className="flex items-center justify-between p-3 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div>
-                  <p className="text-sm font-semibold text-white">{s.user_name || s.user_email}</p>
-                  <p className="text-xs text-white/40">
-                    Can approve descendants of <span className="font-bold text-emerald-400">{s.root_member_name}</span>
-                  </p>
-                </div>
-                <button onClick={() => handleDeleteScope(s.id)}
-                  className="p-2 rounded-lg hover:bg-rose-500/10 transition-colors">
-                  <Trash2 className="w-4 h-4 text-rose-400" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
