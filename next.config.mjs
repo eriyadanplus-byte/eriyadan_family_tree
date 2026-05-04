@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
   reactStrictMode: true,
   serverExternalPackages: ['bcryptjs', 'mysql2'],
   // Transpile @xyflow/react so Next.js compiles it directly instead of treating
