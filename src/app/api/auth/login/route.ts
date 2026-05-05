@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (user.status === 'pending') return NextResponse.json({ error: 'Your account is pending admin approval' }, { status: 403 });
     if (user.status === 'inactive') return NextResponse.json({ error: 'Account is inactive' }, { status: 403 });
 
-    const isValid = user.password === password || await verifyPassword(password, user.password).catch(() => false);
+    const isValid = user.password_hash === password || await verifyPassword(password, user.password_hash).catch(() => false);
     if (!isValid) return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
 
     // Update last_seen so user appears online immediately

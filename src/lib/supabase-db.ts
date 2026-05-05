@@ -1,40 +1,244 @@
-// Supabase PostgreSQL adapter — mirrors the mysql-db query() interface
-// Requires the `run_sql` PostgreSQL function to be installed (see db/supabase/schema.sql)
+// Supabase SDK adapter — replaces the run_sql SECURITY DEFINER RPC.
+// Simple single-table queries use the SDK directly (.from().select/insert/update/delete).
+// Complex queries (JOINs, CTEs, subqueries) use exec_sql (SECURITY INVOKER — RLS enforced).
 
 import { supabase } from './supabase';
 
-/**
- * Execute a SQL query via Supabase RPC.
- * For SELECT: returns an array of rows.
- * For INSERT: appends RETURNING id automatically; returns { insertId, affectedRows }.
- * For UPDATE/DELETE: returns { affectedRows: 1 }.
- */
-export async function query(sql: string, params?: any[]): Promise<any> {
-  const trimmed = sql.trim();
-  const upper = trimmed.toUpperCase().replace(/\s+/g, ' ');
-  const firstWord = upper.split(' ')[0];
-  const hasReturning = upper.includes(' RETURNING ');
+type Row = Record<string, any>;
 
-  // Auto-append RETURNING id for plain INSERT so callers can use result.insertId
-  const _sql = firstWord === 'INSERT' && !hasReturning ? trimmed + ' RETURNING id' : trimmed;
+// ─── SQL parser helpers ────────────────────────────────────────────────────
 
-  const { data, error } = await supabase.rpc('run_sql', {
-    _sql,
-    _params: params ?? [],
+function firstWord(sql: string) {
+  return sql.trim().replace(/\s+/g, ' ').split(' ')[0].toUpperCase();
+}
+
+function isSimpleSelect(sql: string) {
+  const upper = sql.toUpperCase();
+  // Simple = no JOIN, no subquery, no CTE, single FROM table
+  return (
+    !upper.includes(' JOIN ') &&
+    !upper.includes(' WITH ') &&
+    !/\(\s*SELECT/i.test(sql) &&
+    (upper.match(/\bFROM\b/g) || []).length === 1
+  );
+}
+
+function isSimpleSingleTable(sql: string) {
+  const upper = sql.toUpperCase();
+  return (
+    !upper.includes(' JOIN ') &&
+    !upper.includes(' WITH ') &&
+    !/\(\s*SELECT/i.test(sql)
+  );
+}
+
+/** Replace ? placeholders with actual values (for SDK filter building) */
+function bindParams(sql: string, params: any[]): string {
+  let i = 0;
+  return sql.replace(/\?/g, () => {
+    const v = params[i++];
+    if (v === null || v === undefined) return 'NULL';
+    if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+    if (typeof v === 'number') return String(v);
+    return `'${String(v).replace(/'/g, "''")}'`;
   });
+}
 
-  if (error) {
-    console.error('Supabase query error:', error.message, '| SQL:', sql);
-    throw new Error(error.message);
+/** Extract table name from a simple SQL statement */
+function extractTable(sql: string): string | null {
+  const m = sql.match(/(?:FROM|INTO|UPDATE|DELETE\s+FROM)\s+["']?(\w+)["']?/i);
+  return m ? m[1] : null;
+}
+
+/** Parse WHERE clause conditions for simple equality filters */
+function parseWhereEq(sql: string, params: any[]): Record<string, any> | null {
+  // Only handle simple "WHERE col = ? AND col2 = ?" patterns
+  const whereMatch = sql.match(/WHERE\s+(.+?)(?:\s+ORDER|\s+LIMIT|\s+GROUP|$)/is);
+  if (!whereMatch) return {};
+  const clause = whereMatch[1].trim();
+  // Reject complex conditions
+  if (/\bOR\b|\bLIKE\b|\bIN\b|\bIS\s+NULL\b|\bIS\s+NOT\b|[<>!]|INTERVAL|NOW\(\)/i.test(clause)) return null;
+  const parts = clause.split(/\s+AND\s+/i);
+  const filters: Record<string, any> = {};
+  let paramIdx = 0;
+  for (const part of parts) {
+    const m = part.trim().match(/^["']?(\w+)["']?\s*=\s*\?$/);
+    if (!m) return null;
+    filters[m[1]] = params[paramIdx++];
+  }
+  return filters;
+}
+
+// ─── SDK-based simple SELECT ───────────────────────────────────────────────
+
+async function sdkSelect(sql: string, params: any[]): Promise<Row[]> {
+  const table = extractTable(sql);
+  if (!table) return execSql(sql, params);
+
+  let q = supabase.from(table).select('*');
+
+  // Apply simple equality WHERE filters
+  const filters = parseWhereEq(sql, params);
+  if (filters === null) return execSql(sql, params); // complex WHERE — fall back
+  for (const [col, val] of Object.entries(filters)) {
+    if (val === null) q = (q as any).is(col, null);
+    else q = (q as any).eq(col, val);
   }
 
-  const rows: any[] = (data as any[]) ?? [];
+  // ORDER BY
+  const orderMatch = sql.match(/ORDER\s+BY\s+(.+?)(?:\s+LIMIT|$)/is);
+  if (orderMatch) {
+    const orderParts = orderMatch[1].split(',');
+    for (const part of orderParts) {
+      const m = part.trim().match(/^["']?(\w+)["']?(?:\s+(ASC|DESC))?/i);
+      if (m) q = (q as any).order(m[1], { ascending: (m[2] || 'ASC').toUpperCase() === 'ASC' });
+    }
+  }
 
-  if (firstWord === 'INSERT') {
+  // LIMIT
+  const limitMatch = sql.match(/LIMIT\s+(\d+)/i);
+  if (limitMatch) q = (q as any).limit(parseInt(limitMatch[1]));
+
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return (data as Row[]) ?? [];
+}
+
+// ─── SDK-based INSERT ──────────────────────────────────────────────────────
+
+async function sdkInsert(sql: string, params: any[]): Promise<{ insertId: any; affectedRows: number }> {
+  const table = extractTable(sql);
+  if (!table) {
+    const rows = await execSql(sql + (sql.toUpperCase().includes('RETURNING') ? '' : ' RETURNING id'), params);
     return { insertId: rows[0]?.id ?? null, affectedRows: rows.length };
   }
-  if ((firstWord === 'UPDATE' || firstWord === 'DELETE') && !hasReturning) {
+
+  // Parse column names from INSERT INTO table (col1, col2, ...) VALUES (?, ?, ...)
+  const colMatch = sql.match(/INSERT\s+INTO\s+\w+\s*\(([^)]+)\)/i);
+  if (!colMatch) return execSql(sql + ' RETURNING id', params).then(rows => ({ insertId: rows[0]?.id ?? null, affectedRows: rows.length }));
+
+  const cols = colMatch[1].split(',').map(c => c.trim().replace(/"/g, ''));
+  const row: Row = {};
+  cols.forEach((col, i) => { row[col] = params[i] ?? null; });
+
+  const { data, error } = await supabase.from(table).insert(row).select('id').single();
+  if (error) throw new Error(error.message);
+  return { insertId: (data as any)?.id ?? null, affectedRows: 1 };
+}
+
+// ─── SDK-based UPDATE ──────────────────────────────────────────────────────
+
+async function sdkUpdate(sql: string, params: any[]): Promise<{ affectedRows: number }> {
+  if (!isSimpleSingleTable(sql)) {
+    await execSql(sql, params);
     return { affectedRows: 1 };
   }
-  return rows;
+
+  const table = extractTable(sql);
+  if (!table) { await execSql(sql, params); return { affectedRows: 1 }; }
+
+  // Parse SET clause: "SET col1 = ?, col2 = ?"
+  const setMatch = sql.match(/SET\s+(.+?)\s+WHERE/is);
+  if (!setMatch) { await execSql(sql, params); return { affectedRows: 1 }; }
+
+  const setParts = setMatch[1].split(',');
+  const updates: Row = {};
+  let paramIdx = 0;
+  for (const part of setParts) {
+    const m = part.trim().match(/^["']?(\w+)["']?\s*=\s*(?:COALESCE\(\s*)?\?/i);
+    if (!m) { await execSql(sql, params); return { affectedRows: 1 }; }
+    updates[m[1]] = params[paramIdx++];
+  }
+
+  // Parse WHERE
+  const whereFilters = parseWhereEq(sql.replace(/^.*?WHERE/is, 'WHERE'), params.slice(paramIdx));
+  if (whereFilters === null) { await execSql(sql, params); return { affectedRows: 1 }; }
+
+  let q = supabase.from(table).update(updates);
+  for (const [col, val] of Object.entries(whereFilters)) {
+    if (val === null) q = (q as any).is(col, null);
+    else q = (q as any).eq(col, val);
+  }
+
+  const { error } = await q;
+  if (error) throw new Error(error.message);
+  return { affectedRows: 1 };
+}
+
+// ─── SDK-based DELETE ──────────────────────────────────────────────────────
+
+async function sdkDelete(sql: string, params: any[]): Promise<{ affectedRows: number }> {
+  const table = extractTable(sql);
+  if (!table) { await execSql(sql, params); return { affectedRows: 1 }; }
+
+  const whereFilters = parseWhereEq(sql.replace(/^.*?WHERE/is, 'WHERE'), params);
+  if (whereFilters === null) { await execSql(sql, params); return { affectedRows: 1 }; }
+
+  let q = supabase.from(table).delete();
+  for (const [col, val] of Object.entries(whereFilters)) {
+    if (val === null) q = (q as any).is(col, null);
+    else q = (q as any).eq(col, val);
+  }
+
+  const { error } = await q;
+  if (error) throw new Error(error.message);
+  return { affectedRows: 1 };
+}
+
+// ─── Fallback: exec_sql RPC (SECURITY INVOKER — RLS enforced) ─────────────
+
+async function execSql(sql: string, params: any[] = []): Promise<Row[]> {
+  const { data, error } = await supabase.rpc('exec_sql', {
+    _sql: sql,
+    _params: params,
+  });
+  if (error) {
+    console.error('exec_sql error:', { message: error.message, sql, params });
+    throw new Error(error.message || 'Query failed');
+  }
+  return (data as Row[]) ?? [];
+}
+
+// ─── Public query() interface ──────────────────────────────────────────────
+
+export async function query(sql: string, params: any[] = []): Promise<any> {
+  const trimmed = sql.trim();
+  const verb = firstWord(trimmed);
+  const upper = trimmed.toUpperCase();
+  const hasReturning = upper.includes(' RETURNING ');
+
+  try {
+    if (verb === 'SELECT') {
+      if (isSimpleSelect(trimmed)) return sdkSelect(trimmed, params);
+      return execSql(trimmed, params);
+    }
+
+    if (verb === 'INSERT') {
+      // ON CONFLICT upserts → exec_sql
+      if (upper.includes('ON CONFLICT')) {
+        const rows = await execSql(hasReturning ? trimmed : trimmed + ' RETURNING id', params);
+        return { insertId: rows[0]?.id ?? null, affectedRows: rows.length };
+      }
+      return sdkInsert(trimmed, params);
+    }
+
+    if (verb === 'UPDATE') {
+      if (hasReturning) {
+        const rows = await execSql(trimmed, params);
+        return rows;
+      }
+      return sdkUpdate(trimmed, params);
+    }
+
+    if (verb === 'DELETE') {
+      return sdkDelete(trimmed, params);
+    }
+
+    // DDL / other
+    await execSql(trimmed, params);
+    return [];
+  } catch (err: any) {
+    console.error('query() error:', { message: err.message, sql: trimmed, params });
+    throw err;
+  }
 }

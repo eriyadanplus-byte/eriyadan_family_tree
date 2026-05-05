@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSession } from '@/lib/auth';
-import { verifyAnonHelpToken, hashAnonToken, HELP_ANON_COOKIE } from '@/lib/helpToken';
+import { verifyAnonHelpToken, hashAnonToken, issueAnonHelpToken, HELP_ANON_COOKIE } from '@/lib/helpToken';
 import { canViewHandlerInbox } from '@/lib/help/permissions';
 import bus, { type BusEvent } from '@/lib/help/bus';
 
@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   // Identify caller
   let userId: string | null = null;
   let anonTokenHash: string | null = null;
+  let newAnonToken: string | null = null;
   let isHandler = false;
 
   if (session) {
@@ -23,9 +24,12 @@ export async function GET(request: NextRequest) {
   } else {
     const anonCookie = cookieStore.get(HELP_ANON_COOKIE);
     if (!anonCookie?.value || !(await verifyAnonHelpToken(anonCookie.value))) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const issued = await issueAnonHelpToken();
+      anonTokenHash = issued.hash;
+      newAnonToken = issued.token;
+    } else {
+      anonTokenHash = await hashAnonToken(anonCookie.value);
     }
-    anonTokenHash = await hashAnonToken(anonCookie.value);
   }
 
   const encoder = new TextEncoder();
@@ -84,7 +88,7 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  return new Response(stream, {
+  const response = new NextResponse(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
@@ -92,4 +96,15 @@ export async function GET(request: NextRequest) {
       'X-Accel-Buffering': 'no',
     },
   });
+
+  if (newAnonToken) {
+    response.cookies.set(HELP_ANON_COOKIE, newAnonToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    });
+  }
+
+  return response;
 }

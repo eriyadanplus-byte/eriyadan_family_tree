@@ -19,5 +19,9 @@
       "PowerShell(Test-Path *)",
       "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
 }

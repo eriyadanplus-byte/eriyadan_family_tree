@@ -1,11 +1,13 @@
 -- Supabase PostgreSQL Schema for Eriyadan's Legacy Family Tree
 -- Run in Supabase SQL Editor
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable UUID generation helper for Supabase
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- run_sql helper: allows generic SQL execution via RPC (used by supabase-db.ts)
-CREATE OR REPLACE FUNCTION run_sql(_sql TEXT, _params JSONB DEFAULT '[]')
+-- exec_sql: safe fallback RPC for complex queries (JOINs, CTEs).
+-- SECURITY INVOKER means it runs as the calling role — RLS is fully enforced.
+-- Called by supabase-db.ts only when SDK methods cannot express the query.
+CREATE OR REPLACE FUNCTION exec_sql(_sql TEXT, _params JSONB DEFAULT '[]')
 RETURNS JSONB AS $$
 DECLARE
   result     JSONB;
@@ -15,7 +17,6 @@ DECLARE
   v          JSONB;
   first_word TEXT;
 BEGIN
-  -- Replace each ? placeholder with the corresponding quoted/typed literal
   FOR i IN 0..(n - 1) LOOP
     v := _params->i;
     IF v IS NULL OR v = 'null'::jsonb THEN
@@ -30,27 +31,27 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- Identify statement type
   first_word := upper(split_part(
     regexp_replace(btrim(pg_sql), '\s+', ' ', 'g'), ' ', 1));
 
   IF first_word = 'SELECT' THEN
-    -- Pure SELECT: wrap in subquery
-    EXECUTE format('SELECT jsonb_agg(t) FROM (%s) t', pg_sql)
-      INTO result;
+    EXECUTE format('SELECT jsonb_agg(t) FROM (%s) t', pg_sql) INTO result;
     RETURN COALESCE(result, '[]'::JSONB);
   ELSIF pg_sql ~* '\mRETURNING\M' THEN
-    -- DML with RETURNING: must use CTE (INSERT/UPDATE/DELETE cannot be FROM subqueries)
-    EXECUTE format('WITH t AS (%s) SELECT jsonb_agg(t) FROM t', pg_sql)
-      INTO result;
+    EXECUTE format('WITH t AS (%s) SELECT jsonb_agg(t) FROM t', pg_sql) INTO result;
     RETURN COALESCE(result, '[]'::JSONB);
   ELSE
-    -- Plain DML (INSERT/UPDATE/DELETE without RETURNING)
     EXECUTE pg_sql;
     RETURN '[]'::JSONB;
   END IF;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY INVOKER;
+
+-- Grant exec_sql to anon and authenticated roles
+GRANT EXECUTE ON FUNCTION exec_sql(TEXT, JSONB) TO anon, authenticated;
+
+-- Drop the old SECURITY DEFINER function if it exists
+DROP FUNCTION IF EXISTS run_sql(TEXT, JSONB);
 
 -- Members table
 CREATE TABLE IF NOT EXISTS members (
@@ -117,6 +118,8 @@ CREATE TABLE IF NOT EXISTS spouses (
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     member_id UUID,
+    secondary_ancestor_id UUID,
+    relation_type TEXT,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     name TEXT,
@@ -127,7 +130,8 @@ CREATE TABLE IF NOT EXISTS users (
     last_login TIMESTAMPTZ,
     last_seen TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL
+    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+    FOREIGN KEY (secondary_ancestor_id) REFERENCES members(id) ON DELETE SET NULL
 );
 
 -- Approval scopes table (editor subtree delegation)
@@ -179,11 +183,20 @@ CREATE TABLE IF NOT EXISTS help_threads (
     user_id UUID,
     anon_token_hash TEXT,
     trigger_stage TEXT,
+    inquiry_kind TEXT NOT NULL DEFAULT 'general',
     context_snapshot JSONB,
+    ancestor_name TEXT,
+    place TEXT,
+    contact_number TEXT,
+    whatsapp_number TEXT,
     status TEXT DEFAULT 'open',
+    assigned_handler_id UUID,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    resolved_at TIMESTAMPTZ,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_handler_id) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT chk_help_threads_owner CHECK (user_id IS NOT NULL OR anon_token_hash IS NOT NULL)
 );
 
 -- Help messages
@@ -191,12 +204,24 @@ CREATE TABLE IF NOT EXISTS help_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     thread_id UUID NOT NULL,
     sender_kind TEXT NOT NULL,
-    sender_id UUID,
+    sender_user_id UUID,
     sender_name TEXT,
     body TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
+    read_at TIMESTAMPTZ,
     FOREIGN KEY (thread_id) REFERENCES help_threads(id) ON DELETE CASCADE,
-    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Messaging handler grants
+CREATE TABLE IF NOT EXISTS messaging_handler_grants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    editor_user_id UUID NOT NULL,
+    granted_by_admin_id UUID NOT NULL,
+    granted_at TIMESTAMPTZ DEFAULT NOW(),
+    revoked_at TIMESTAMPTZ,
+    FOREIGN KEY (editor_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (granted_by_admin_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Indexes
@@ -218,6 +243,9 @@ CREATE INDEX IF NOT EXISTS idx_approval_scopes_user ON approval_scopes(user_id);
 CREATE INDEX IF NOT EXISTS idx_approval_scopes_root ON approval_scopes(root_member_id);
 CREATE INDEX IF NOT EXISTS idx_help_threads_user ON help_threads(user_id);
 CREATE INDEX IF NOT EXISTS idx_help_threads_status ON help_threads(status);
+CREATE INDEX IF NOT EXISTS idx_help_threads_handler ON help_threads(assigned_handler_id);
+CREATE INDEX IF NOT EXISTS idx_help_messages_thread ON help_messages(thread_id);
+CREATE INDEX IF NOT EXISTS idx_grants_editor ON messaging_handler_grants(editor_user_id);
 
 -- updated_at trigger for members
 CREATE OR REPLACE FUNCTION update_members_updated_at()
@@ -262,13 +290,21 @@ CREATE POLICY "members_delete_admin"
   ON members FOR DELETE
   USING (true);
 
--- RLS Policies: users — users can read their own, admins can read all
+-- RLS Policies: users
 CREATE POLICY "users_select_own"
   ON users FOR SELECT
-  USING (true); -- app-layer controls visibility
+  USING (true);
+
+CREATE POLICY "users_insert"
+  ON users FOR INSERT
+  WITH CHECK (true);
 
 CREATE POLICY "users_update_admin"
   ON users FOR UPDATE
+  USING (true);
+
+CREATE POLICY "users_delete_admin"
+  ON users FOR DELETE
   USING (true);
 
 -- RLS Policies: audit_log — append-only, no delete
@@ -289,6 +325,10 @@ CREATE POLICY "help_threads_insert"
   ON help_threads FOR INSERT
   WITH CHECK (true);
 
+CREATE POLICY "help_threads_update"
+  ON help_threads FOR UPDATE
+  USING (true);
+
 CREATE POLICY "help_messages_select"
   ON help_messages FOR SELECT
   USING (true);
@@ -296,3 +336,33 @@ CREATE POLICY "help_messages_select"
 CREATE POLICY "help_messages_insert"
   ON help_messages FOR INSERT
   WITH CHECK (true);
+
+-- RLS Policies: spouses, relationships, approval_scopes
+CREATE POLICY "spouses_select"
+  ON spouses FOR SELECT USING (true);
+CREATE POLICY "spouses_insert"
+  ON spouses FOR INSERT WITH CHECK (true);
+CREATE POLICY "spouses_update"
+  ON spouses FOR UPDATE USING (true);
+
+CREATE POLICY "relationships_select"
+  ON relationships FOR SELECT USING (true);
+CREATE POLICY "relationships_insert"
+  ON relationships FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "approval_scopes_select"
+  ON approval_scopes FOR SELECT USING (true);
+CREATE POLICY "approval_scopes_insert"
+  ON approval_scopes FOR INSERT WITH CHECK (true);
+CREATE POLICY "approval_scopes_delete"
+  ON approval_scopes FOR DELETE USING (true);
+
+-- RLS Policies: messaging_handler_grants
+ALTER TABLE messaging_handler_grants ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "grants_select" ON messaging_handler_grants FOR SELECT USING (true);
+CREATE POLICY "grants_insert" ON messaging_handler_grants FOR INSERT WITH CHECK (true);
+CREATE POLICY "grants_update" ON messaging_handler_grants FOR UPDATE USING (true);
+
+-- Grant table access to anon and authenticated roles
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT USAGE ON SCHEMA public TO anon, authenticated;

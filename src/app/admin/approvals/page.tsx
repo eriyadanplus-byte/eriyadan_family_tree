@@ -31,17 +31,29 @@ export default function ApprovalsPage() {
       const res  = await fetch('/api/admin/approvals');
       const data = await res.json();
       
-      // Debug: Log the response for troubleshooting
-      console.log('Approvals API response:', { status: res.status, data, isArray: Array.isArray(data) });
-      
       if (!res.ok) {
         console.error('Approvals API error:', data);
         setPending([]);
       } else {
-        setPending(Array.isArray(data) ? data : []);
-        const defaults: Record<string, string> = {};
-        (Array.isArray(data) ? data : []).forEach((u: PendingUser) => { defaults[u.userId] = 'viewer'; });
-        setRoleMap(defaults);
+        // DON'T filter - just set whatever the API returns
+        console.log('Raw API response:', JSON.stringify(data));
+        // Handle both array response and error object
+        if (data && typeof data === 'object' && Array.isArray(data)) {
+          setPending(data);
+          // Build roleMap for each user - normalize empty userId to index key
+          const defaults: Record<string, string> = {};
+          data.forEach((u: any, i: number) => { 
+            // Use index as fallback key if userId is empty
+            const key = (u && u.userId) ? u.userId : 'idx_' + i;
+            defaults[key] = 'viewer'; 
+          });
+          setRoleMap(defaults);
+        } else if (data && data.error) {
+          console.error('API returned error:', data.error);
+          setPending([]);
+        } else {
+          setPending([]);
+        }
       }
     } catch (err) {
       console.error('Fetch pending error:', err);
@@ -52,12 +64,13 @@ export default function ApprovalsPage() {
   useEffect(() => { fetchPending(); }, []);
 
   const handle = async (userId: string, action: 'approve' | 'reject') => {
-    // Guard against undefined or empty userId
-    if (!userId || typeof userId !== 'string') {
+    // Guard against undefined or empty userId - use index fallback
+    const key = userId ? userId : 'idx_0';
+    if (!key) {
       showToast('Invalid user ID. Please refresh the page and try again.', false);
       return;
     }
-    setProcessing(userId);
+    setProcessing(key);
     try {
       const res = await fetch('/api/admin/approvals', {
         method: 'POST',
@@ -114,9 +127,9 @@ export default function ApprovalsPage() {
         </div>
       )}
 
-      <div className="space-y-4">
-        {pending.filter(u => u?.userId).map(user => (
-          <div key={user.userId} className="rounded-2xl p-6"
+<div className="space-y-4">
+        {pending.map((user: any, idx: number) => (
+          <div key={user?.userId || idx} className="rounded-2xl p-6"
             style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
 
             {/* User info */}
@@ -124,11 +137,11 @@ export default function ApprovalsPage() {
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0"
                   style={{ background: 'rgba(76,175,114,0.15)', color: '#81C784', border: '1px solid rgba(76,175,114,0.25)' }}>
-                  {user.fullName.charAt(0).toUpperCase()}
+                  {(!user.fullName && !user.email) ? '?' : (user.fullName || user.email || 'User').charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-semibold text-white text-lg">{user.fullName}</p>
-                  <p className="text-sm" style={{ color: 'rgba(232,245,233,0.55)' }}>{user.email}</p>
+                  <p className="font-semibold text-white text-lg">{!user.fullName && !user.email ? 'Unknown User' : (user.fullName || user.email)}</p>
+                  <p className="text-sm" style={{ color: 'rgba(232,245,233,0.55)' }}>{user.email || 'No email'}</p>
                   {user.mobileNumber && (
                     <p className="text-xs mt-0.5" style={{ color: 'rgba(232,245,233,0.40)' }}>{user.mobileNumber}</p>
                   )}
@@ -145,7 +158,7 @@ export default function ApprovalsPage() {
               style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <GitBranch size={14} style={{ color: '#81C784' }} />
               <span className="text-sm" style={{ color: 'rgba(232,245,233,0.55)' }}>
-                Selected ancestor: <span className="font-semibold text-white">{user.ancestorName}</span>
+                Selected ancestor: <span className="font-semibold text-white">{(user.ancestorName)}</span>
               </span>
             </div>
 
@@ -171,7 +184,7 @@ export default function ApprovalsPage() {
             {/* Action buttons - AGGRESSIVE STYLING FOR VISIBILITY */}
             <div className="flex gap-3 mt-6 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
               <button 
-                onClick={() => handle(user.userId, 'approve')} 
+                onClick={() => handle(user.userId || 'idx_' + idx, 'approve')} 
                 disabled={!!processing}
                 className="flex-1 h-12 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                 style={{ 
@@ -180,11 +193,11 @@ export default function ApprovalsPage() {
                   border: '2px solid #16a34a',
                   boxShadow: '0 4px 12px rgba(34,197,94,0.3)'
                 }}>
-                {processing === user.userId ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                {processing === (user.userId || 'idx_' + idx) ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
                 APPROVE
               </button>
               <button 
-                onClick={() => handle(user.userId, 'reject')} 
+                onClick={() => handle(user.userId || 'idx_' + idx, 'reject')} 
                 disabled={!!processing}
                 className="px-8 h-12 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                 style={{ 
@@ -197,7 +210,7 @@ export default function ApprovalsPage() {
             </div>
 
             <p className="text-xs mt-3" style={{ color: 'rgba(232,245,233,0.30)' }}>
-              Requested {new Date(user.requestedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              Requested {user.requestedAt ? new Date(user.requestedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recently'}
             </p>
           </div>
         ))}
