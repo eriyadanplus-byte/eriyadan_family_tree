@@ -7,7 +7,7 @@ export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
-    await requireRole(['super_admin', 'editor']);
+    await requireRole(['super_admin', 'editor'], request);
 
     const active = await query('SELECT * FROM members WHERE deleted_at IS NULL') as any[];
     const now = Date.now();

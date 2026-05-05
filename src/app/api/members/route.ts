@@ -123,13 +123,14 @@ export async function POST(request: NextRequest) {
 
   // Guard: founding members (no parents/spouse) require super_admin and empty tree or explicit allowRoot
   const hasNoParent = !fatherId && !motherId && !spouseId;
-  if (hasNoParent) {
-    if (session.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Only admin can create founding members' }, { status: 403 });
-    }
+  if (hasNoParent && session.role !== 'super_admin') {
+    return NextResponse.json({ error: 'Only admin can create founding members' }, { status: 403 });
+  }
+  if (hasNoParent && session.role === 'super_admin') {
     const existing = await query('SELECT COUNT(*) as cnt FROM members WHERE deleted_at IS NULL') as any[];
+    const cnt = Number(existing[0]?.cnt ?? existing[0]?.count ?? 0);
     const allowRoot = body.allowRoot === true;
-    if (existing[0]?.cnt > 0 && !allowRoot) {
+    if (cnt > 0 && !allowRoot) {
       return NextResponse.json({ error: 'Tree already has members. Use allowRoot to force.' }, { status: 400 });
     }
   }

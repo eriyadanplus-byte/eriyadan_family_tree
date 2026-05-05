@@ -85,10 +85,15 @@ export default function AdminMembersPage() {
     if (!confirm('Are you sure you want to delete this member?')) return;
     setDeletingId(id);
     try {
-      await fetch(`/api/members/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/members/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || `Delete failed (${res.status})`);
+      }
       await fetchMembers();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete member:', error);
+      setError(error.message || 'Failed to delete member');
     } finally {
       setDeletingId(null);
     }
