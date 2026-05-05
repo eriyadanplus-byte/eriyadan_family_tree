@@ -3,6 +3,7 @@ import { query } from '@/lib/db';
 import { getSession, rolePermissions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 function mapMember(row: any) {
   return {
@@ -73,8 +74,9 @@ export async function GET(request: NextRequest) {
     values.push(like, like, like);
   }
 
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const sql = `SELECT m.*, 
-    CASE WHEN u.last_seen > NOW() - INTERVAL '10 minutes' THEN 1 ELSE 0 END as is_online
+    CASE WHEN u.last_seen > '${tenMinutesAgo}' THEN 1 ELSE 0 END as is_online
     FROM members m
     LEFT JOIN users u ON u.member_id = m.id
     WHERE ${conditions.join(' AND ')} ORDER BY m.generation ASC, m.full_name ASC LIMIT ${limit}`;
@@ -99,7 +101,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   if (!rolePermissions[session.role]?.canAdd) return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
 

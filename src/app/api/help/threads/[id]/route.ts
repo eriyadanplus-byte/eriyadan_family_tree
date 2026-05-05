@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!thread) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   // Auth: session user OR anon cookie owner
-  const session = await getSession();
+  const session = await getSession(request);
   let authorized = false;
 
   if (session) {

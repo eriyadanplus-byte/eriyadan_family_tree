@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth';
 import { setSpouse } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 async function resolveMemberId(session: any, reqMemberId?: string | null): Promise<string | null> {
   if (reqMemberId && session.role === 'super_admin') return reqMemberId;
@@ -11,7 +12,7 @@ async function resolveMemberId(session: any, reqMemberId?: string | null): Promi
 }
 
 export async function GET(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session || session.role !== 'super_admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session || session.role !== 'super_admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

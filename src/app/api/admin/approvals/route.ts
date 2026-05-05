@@ -4,10 +4,11 @@ import { getSession } from '@/lib/auth';
 import { descendantIds } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) return NextResponse.json({ error: 'Unauthorised' }, { status: 403 });
 
     const isSuperAdmin = session.role === 'super_admin';
@@ -64,7 +65,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) return NextResponse.json({ error: 'Unauthorised' }, { status: 403 });
 
     const isSuperAdmin = session.role === 'super_admin';
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'reject') {
-      await query('UPDATE users SET status = ? WHERE id = ?', ['rejected', userId]);
+      await query('DELETE FROM users WHERE id = ?', [userId]);
       return NextResponse.json({ success: true, message: 'User rejected' });
     }
 

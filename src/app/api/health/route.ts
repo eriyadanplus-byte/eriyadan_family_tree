@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
-export async function GET() {
+export async function GET(request: Request) {
   let db = false;
   try {
     await query('SELECT 1');

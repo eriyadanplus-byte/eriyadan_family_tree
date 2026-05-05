@@ -3,9 +3,10 @@ import { query } from '@/lib/db';
 import { getSession, hashPassword } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export async function PATCH(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
   const body = await request.json();

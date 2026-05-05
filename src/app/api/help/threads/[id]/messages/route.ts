@@ -41,7 +41,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const parsed = SendMessageSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
 
-  const session = await getSession();
+  const session = await getSession(request);
   let senderKind: 'user' | 'anon' | 'admin' | 'editor' = 'anon';
   let senderUserId: string | null = null;
   let authorized = false;

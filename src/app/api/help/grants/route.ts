@@ -4,9 +4,10 @@ import { query } from '@/lib/db';
 import { GrantSchema } from '@/lib/help/schemas';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
-export async function GET() {
-  const session = await getSession();
+export async function GET(request: Request) {
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (session.role !== 'super_admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -22,7 +23,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (session.role !== 'super_admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -41,9 +42,9 @@ export async function POST(request: NextRequest) {
 
   // Revoke any existing active grant first (idempotent re-grant)
   await query(
-    `UPDATE messaging_handler_grants SET revoked_at = NOW()
+    `UPDATE messaging_handler_grants SET revoked_at = ?
      WHERE editor_user_id = ? AND revoked_at IS NULL`,
-    [editor_user_id]
+    [new Date().toISOString(), editor_user_id]
   );
 
   const result = await query(

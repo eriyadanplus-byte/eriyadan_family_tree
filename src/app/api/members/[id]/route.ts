@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   const { id } = await params;
   const isSelfEdit = String(session.memberId) === String(id);
@@ -89,11 +89,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   if (!rolePermissions[session.role]?.canDelete) return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
 
   const { id } = await params;
-  await query('UPDATE members SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL', [id]);
+  const now = new Date().toISOString();
+  await query('UPDATE members SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL', [now, id]);
   return NextResponse.json({ success: true });
 }

@@ -9,7 +9,7 @@ export const runtime = 'edge';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (session.role !== 'super_admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

@@ -9,7 +9,7 @@ export const runtime = 'edge';
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getSession();
+  const session = await getSession(_request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const threadId = id;
@@ -27,8 +27,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   }
 
   await query(
-    `UPDATE help_threads SET status = 'resolved', resolved_at = NOW() WHERE id = ?`,
-    [threadId]
+    `UPDATE help_threads SET status = 'resolved', resolved_at = ? WHERE id = ?`,
+    [new Date().toISOString(), threadId]
   );
 
   bus.publish({ kind: 'thread_updated', threadId, payload: { status: 'resolved' } });

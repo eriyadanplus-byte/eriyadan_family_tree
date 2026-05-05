@@ -4,10 +4,11 @@ import { getSession, rolePermissions } from '@/lib/auth';
 import { descendantIds } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 // GET: List all approval scopes (admin) or own scopes (editor)
-export async function GET() {
-  const session = await getSession();
+export async function GET(request: Request) {
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
   let sql: string;
@@ -39,7 +40,7 @@ export async function GET() {
 
 // POST: Create a new approval scope (admin only)
 export async function POST(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   if (session.role !== 'super_admin') return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
 
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
 
 // DELETE: Remove an approval scope (admin only)
 export async function DELETE(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   if (session.role !== 'super_admin') return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
 

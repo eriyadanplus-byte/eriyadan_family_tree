@@ -99,7 +99,7 @@ describe('GET /api/presence — online users', () => {
       { member_id: 'def-456-uuid-2' },
     ] as any);
 
-    const response = await GET();
+    const response = await GET(new Request('http://localhost:3000/api/presence'));
     expect(response.status).toBe(200);
     const data = await response.json();
     expect(Array.isArray(data)).toBe(true);
@@ -109,7 +109,7 @@ describe('GET /api/presence — online users', () => {
   it('returns empty array when no users are online', async () => {
     mockQuery.mockResolvedValue([] as any);
 
-    const response = await GET();
+    const response = await GET(new Request('http://localhost:3000/api/presence'));
     expect(response.status).toBe(200);
     const data = await response.json();
     expect(data).toEqual([]);
@@ -120,7 +120,7 @@ describe('GET /api/presence — online users', () => {
       { member_id: 123 }, // numeric from some DBs
     ] as any);
 
-    const response = await GET();
+    const response = await GET(new Request('http://localhost:3000/api/presence'));
     const data = await response.json();
     expect(typeof data[0]).toBe('string');
   });

@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
     const { view } = await request.json();

@@ -3,6 +3,7 @@ import { query } from '@/lib/db';
 import { requireRole } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 async function getSetting(key: string, defaultValue: string): Promise<string> {
   try {
@@ -20,7 +21,7 @@ async function setSetting(key: string, value: string) {
   );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requireRole(['super_admin', 'editor']);
     const [siteName, allowRegistration, requireApproval, notifications, hideAncestralPrivacy, inAppMessage] = await Promise.all([

@@ -8,7 +8,7 @@ export const runtime = 'edge';
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getSession();
+  const session = await getSession(_request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (session.role !== 'super_admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -25,8 +25,8 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   if (grant.revoked_at) return NextResponse.json({ error: 'Already revoked' }, { status: 409 });
 
   await query(
-    `UPDATE messaging_handler_grants SET revoked_at = NOW() WHERE id = ?`,
-    [grantId]
+    `UPDATE messaging_handler_grants SET revoked_at = ? WHERE id = ?`,
+    [new Date().toISOString(), grantId]
   );
 
   // Notify SSE bus so open streams for this editor can be dropped

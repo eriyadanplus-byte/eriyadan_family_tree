@@ -4,9 +4,10 @@ import { getSession } from '@/lib/auth';
 import { addStubSpouse, addStubChild, setSpouse, computeChildGenerationAsync } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   if (!session.memberId) return NextResponse.json({ error: 'No member profile linked' }, { status: 400 });
 

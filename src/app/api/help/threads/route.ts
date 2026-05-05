@@ -8,6 +8,7 @@ import { CreateThreadSchema } from '@/lib/help/schemas';
 import bus from '@/lib/help/bus';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 // Simple in-memory rate limiter: 10 creates per identity per minute
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
   } = parsed.data;
 
   // Identify caller: logged-in user OR anon cookie
-  const session = await getSession();
+  const session = await getSession(request);
   let userId: string | null = null;
   let anonTokenHash: string | null = null;
   let senderKind: 'user' | 'anon' = 'anon';
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   if (!(await canViewHandlerInbox(session))) {

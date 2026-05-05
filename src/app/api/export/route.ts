@@ -4,9 +4,10 @@ import { query } from '@/lib/db';
 import { getSession, rolePermissions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   if (!rolePermissions[session.role]?.canExport)
     return NextResponse.json({ error: 'Export permission required' }, { status: 403 });
