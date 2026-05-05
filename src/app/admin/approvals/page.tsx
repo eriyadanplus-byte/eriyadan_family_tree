@@ -40,6 +40,11 @@ export default function ApprovalsPage() {
   useEffect(() => { fetchPending(); }, []);
 
   const handle = async (userId: string, action: 'approve' | 'reject') => {
+    // Guard against undefined or empty userId
+    if (!userId || typeof userId !== 'string') {
+      showToast('Invalid user ID. Please refresh the page and try again.', false);
+      return;
+    }
     setProcessing(userId);
     try {
       const res = await fetch('/api/admin/approvals', {
@@ -98,7 +103,7 @@ export default function ApprovalsPage() {
       )}
 
       <div className="space-y-4">
-        {pending.map(user => (
+        {pending.filter(u => u?.userId).map(user => (
           <div key={user.userId} className="rounded-2xl p-6"
             style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
 

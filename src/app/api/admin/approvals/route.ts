@@ -72,8 +72,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { action, userId, role } = await request.json();
-    if (!userId || !action) return NextResponse.json({ error: 'userId and action are required' }, { status: 400 });
+    let body: { action?: string; userId?: string; role?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+    
+    const { action, userId, role } = body;
+    if (!userId || !action) {
+      return NextResponse.json({ 
+        error: 'userId and action are required',
+        debug: { userId: String(userId), action: String(action) }
+      }, { status: 400 });
+    }
 
     const users = await query('SELECT * FROM users WHERE id = ?', [userId]) as any[];
     if (users.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
