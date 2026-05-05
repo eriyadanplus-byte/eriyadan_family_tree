@@ -3,7 +3,6 @@ import { requireRole } from '@/lib/auth';
 import { getAuditLog } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET() {
   try {

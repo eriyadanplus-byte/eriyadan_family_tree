@@ -168,27 +168,15 @@ async function sdkUpdate(sql: string, params: any[]): Promise<{ affectedRows: nu
 // ─── SDK-based DELETE ──────────────────────────────────────────────────────
 
 async function sdkDelete(sql: string, params: any[]): Promise<{ affectedRows: number }> {
-  const table = extractTable(sql);
-  if (!table) { await execSql(sql, params); return { affectedRows: 1 }; }
-
-  const whereFilters = parseWhereEq(sql.replace(/^.*?WHERE/is, 'WHERE'), params);
-  if (whereFilters === null) { await execSql(sql, params); return { affectedRows: 1 }; }
-
-  let q = supabase.from(table).delete();
-  for (const [col, val] of Object.entries(whereFilters)) {
-    if (val === null) q = (q as any).is(col, null);
-    else q = (q as any).eq(col, val);
-  }
-
-  const { error } = await q;
-  if (error) throw new Error(error.message);
+  // Always use run_sql for DELETE — SDK delete without explicit filter is blocked by Supabase
+  await execSql(sql, params);
   return { affectedRows: 1 };
 }
 
 // ─── Fallback: exec_sql RPC (SECURITY INVOKER — RLS enforced) ─────────────
 
 async function execSql(sql: string, params: any[] = []): Promise<Row[]> {
-  const { data, error } = await supabase.rpc('exec_sql', {
+  const { data, error } = await supabase.rpc('run_sql', {
     _sql: sql,
     _params: params,
   });
@@ -214,9 +202,9 @@ export async function query(sql: string, params: any[] = []): Promise<any> {
     }
 
     if (verb === 'INSERT') {
-      // ON CONFLICT upserts → exec_sql
-      if (upper.includes('ON CONFLICT')) {
-        const rows = await execSql(hasReturning ? trimmed : trimmed + ' RETURNING id', params);
+      // ON CONFLICT upserts or RETURNING → run_sql
+      if (upper.includes('ON CONFLICT') || hasReturning) {
+        const rows = await execSql(trimmed, params);
         return { insertId: rows[0]?.id ?? null, affectedRows: rows.length };
       }
       return sdkInsert(trimmed, params);

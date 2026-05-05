@@ -40,13 +40,8 @@ export default function ApprovalsPage() {
         // Handle both array response and error object
         if (data && typeof data === 'object' && Array.isArray(data)) {
           setPending(data);
-          // Build roleMap for each user - normalize empty userId to index key
           const defaults: Record<string, string> = {};
-          data.forEach((u: any, i: number) => { 
-            // Use index as fallback key if userId is empty
-            const key = (u && u.userId) ? u.userId : 'idx_' + i;
-            defaults[key] = 'viewer'; 
-          });
+          data.forEach((u: any) => { if (u?.userId) defaults[u.userId] = 'viewer'; });
           setRoleMap(defaults);
         } else if (data && data.error) {
           console.error('API returned error:', data.error);
@@ -64,13 +59,11 @@ export default function ApprovalsPage() {
   useEffect(() => { fetchPending(); }, []);
 
   const handle = async (userId: string, action: 'approve' | 'reject') => {
-    // Guard against undefined or empty userId - use index fallback
-    const key = userId ? userId : 'idx_0';
-    if (!key) {
-      showToast('Invalid user ID. Please refresh the page and try again.', false);
+    if (!userId) {
+      showToast('Invalid user ID. Please refresh the page.', false);
       return;
     }
-    setProcessing(key);
+    setProcessing(userId);
     try {
       const res = await fetch('/api/admin/approvals', {
         method: 'POST',
@@ -184,7 +177,7 @@ export default function ApprovalsPage() {
             {/* Action buttons - AGGRESSIVE STYLING FOR VISIBILITY */}
             <div className="flex gap-3 mt-6 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
               <button 
-                onClick={() => handle(user.userId || 'idx_' + idx, 'approve')} 
+                onClick={() => handle(user.userId, 'approve')} 
                 disabled={!!processing}
                 className="flex-1 h-12 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                 style={{ 
@@ -193,11 +186,11 @@ export default function ApprovalsPage() {
                   border: '2px solid #16a34a',
                   boxShadow: '0 4px 12px rgba(34,197,94,0.3)'
                 }}>
-                {processing === (user.userId || 'idx_' + idx) ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                {processing === user.userId ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
                 APPROVE
               </button>
               <button 
-                onClick={() => handle(user.userId || 'idx_' + idx, 'reject')} 
+                onClick={() => handle(user.userId, 'reject')} 
                 disabled={!!processing}
                 className="px-8 h-12 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                 style={{ 

@@ -4,7 +4,6 @@ import { getSession } from '@/lib/auth';
 import { addStubSpouse, addStubChild, setSpouse, computeChildGenerationAsync } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const session = await getSession();

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { getSession, requireRole } from '@/lib/auth';
+import { getSession } from '@/lib/auth';
 import { descendantIds } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET() {
   try {
@@ -31,16 +30,18 @@ export async function GET() {
     `) as any[];
 
     let result = rows.map(r => ({
-      userId: r.userId, email: r.email, fullName: r.fullName || r.email,
-      mobileNumber: r.mobileNumber || '', ancestorId: r.ancestorId || null,
-      ancestorName: r.ancestorId ? (r.ancestorName || 'Unknown') : 'Root member',
-      secondaryAncestorId: r.secondaryAncestorId || null,
-      secondaryAncestorName: r.secondaryAncestorId ? (r.secondaryAncestorName || 'Unknown') : null,
-      relationType: r.relationType || null,
-      requestedAt: r.requestedAt || new Date().toISOString(),
+      userId: r.userid ?? r.userId,
+      email: r.email,
+      fullName: r.fullname ?? r.fullName ?? r.email,
+      mobileNumber: r.mobilenumber ?? r.mobileNumber ?? '',
+      ancestorId: r.ancestorid ?? r.ancestorId ?? null,
+      ancestorName: (r.ancestorid ?? r.ancestorId) ? (r.ancestorname ?? r.ancestorName ?? 'Unknown') : 'Root member',
+      secondaryAncestorId: r.secondaryancestorid ?? r.secondaryAncestorId ?? null,
+      secondaryAncestorName: (r.secondaryancestorid ?? r.secondaryAncestorId) ? (r.secondaryancestorname ?? r.secondaryAncestorName ?? 'Unknown') : null,
+      relationType: r.relationtype ?? r.relationType ?? null,
+      requestedAt: r.requestedat ?? r.requestedAt ?? new Date().toISOString(),
     }));
 
-    // Editors only see pending users whose ancestor falls within their scope
     if (isEditorWithApprove && !isSuperAdmin) {
       const scopes = (await query(
         'SELECT root_member_id FROM approval_scopes WHERE user_id = ?',
@@ -55,8 +56,9 @@ export async function GET() {
     }
 
     return NextResponse.json(result);
-  } catch {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 403 });
+  } catch (err: any) {
+    console.error('Approvals GET error:', err);
+    return NextResponse.json({ error: err?.message || 'Failed to load approvals' }, { status: 500 });
   }
 }
 
@@ -78,20 +80,16 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
-    
+
     const { action, userId, role } = body;
     if (!userId || !action) {
-      return NextResponse.json({ 
-        error: 'userId and action are required',
-        debug: { userId: String(userId), action: String(action) }
-      }, { status: 400 });
+      return NextResponse.json({ error: 'userId and action are required' }, { status: 400 });
     }
 
     const users = await query('SELECT * FROM users WHERE id = ?', [userId]) as any[];
     if (users.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     const user = users[0];
 
-    // Editors: verify the target user's ancestor is within their scope
     if (isEditorWithApprove && !isSuperAdmin && user.member_id) {
       const scopes = (await query(
         'SELECT root_member_id FROM approval_scopes WHERE user_id = ?',
@@ -109,22 +107,19 @@ export async function POST(request: NextRequest) {
       const assignedRole = role || 'viewer';
       const primaryAncestorId = user.member_id ? String(user.member_id) : null;
       const secondaryAncestorId = user.secondary_ancestor_id ? String(user.secondary_ancestor_id) : null;
-      const relationType = user.relation_type || 'child'; // default to child for legacy rows
+      const relationType = user.relation_type || 'child';
 
       const ancestor = primaryAncestorId
         ? (await query('SELECT * FROM members WHERE id = ? AND deleted_at IS NULL', [primaryAncestorId]) as any[])[0]
         : null;
 
       if (relationType === 'spouse') {
-        // ─── Spouse path: same generation, no parent IDs, link via spouses table ───
         const spouseGen = ancestor ? ancestor.generation : 1;
         const spouseResult = await query(
-          'INSERT INTO members (full_name, mobile_number, email, generation, father_id, mother_id, is_late, "role", created_by) VALUES (?, ?, ?, ?, NULL, NULL, false, ?, ?)',
-          [user.name || user.email, user.mobile_number || '', user.email,
-           spouseGen, assignedRole, session.id]
+          'INSERT INTO members (full_name, mobile_number, email, generation, father_id, mother_id, is_late, created_by) VALUES (?, ?, ?, ?, ?, ?, false, ?) RETURNING id',
+          [user.name || user.email, user.mobile_number || '', user.email, spouseGen, null, null, session.id]
         ) as any;
-        const newMemberId = String(spouseResult.insertId);
-        // Link as spouse via spouses table
+        const newMemberId = String(spouseResult.insertId ?? spouseResult[0]?.id);
         if (primaryAncestorId) {
           const { setSpouse } = await import('@/lib/family');
           await setSpouse(newMemberId, primaryAncestorId);
@@ -134,21 +129,19 @@ export async function POST(request: NextRequest) {
       }
 
       if (relationType === 'sibling') {
-        // ─── Sibling path: same generation, same parents as ancestor ───
         const sibGen = ancestor ? ancestor.generation : 1;
         const sibFatherId = ancestor?.father_id ? String(ancestor.father_id) : null;
         const sibMotherId = ancestor?.mother_id ? String(ancestor.mother_id) : null;
         const sibResult = await query(
-          'INSERT INTO members (full_name, mobile_number, email, generation, father_id, mother_id, is_late, "role", created_by) VALUES (?, ?, ?, ?, ?, ?, false, ?, ?)',
-          [user.name || user.email, user.mobile_number || '', user.email,
-           sibGen, sibFatherId, sibMotherId, assignedRole, session.id]
+          'INSERT INTO members (full_name, mobile_number, email, generation, father_id, mother_id, is_late, created_by) VALUES (?, ?, ?, ?, ?, ?, false, ?) RETURNING id',
+          [user.name || user.email, user.mobile_number || '', user.email, sibGen, sibFatherId, sibMotherId, session.id]
         ) as any;
-        await query('UPDATE users SET status = ?, role = ?, member_id = ? WHERE id = ?', ['active', assignedRole, String(sibResult.insertId), userId]);
+        const sibMemberId = String(sibResult.insertId ?? sibResult[0]?.id);
+        await query('UPDATE users SET status = ?, role = ?, member_id = ? WHERE id = ?', ['active', assignedRole, sibMemberId, userId]);
         return NextResponse.json({ success: true, message: 'Sibling approved and added to the family tree' });
       }
 
-      // ─── Child path (default): generation + 1, parents = ancestors ───
-      // Determine which ancestor is father/mother by gender, fallback to primary=father
+      // Child path (default)
       let fatherId: string | null = null;
       let motherId: string | null = null;
       if (primaryAncestorId && secondaryAncestorId) {
@@ -166,8 +159,6 @@ export async function POST(request: NextRequest) {
         const pGender = pRows[0]?.gender;
         if (pGender === 'female') motherId = primaryAncestorId;
         else fatherId = primaryAncestorId;
-
-        // Auto-fill missing parent from spouse relationship
         const { getSpouse } = await import('@/lib/family');
         const spouse = await getSpouse(primaryAncestorId);
         if (spouse) {
@@ -177,22 +168,23 @@ export async function POST(request: NextRequest) {
       }
 
       const childResult = await query(
-        'INSERT INTO members (full_name, mobile_number, email, generation, father_id, mother_id, is_late, "role", created_by) VALUES (?, ?, ?, ?, ?, ?, false, ?, ?)',
+        'INSERT INTO members (full_name, mobile_number, email, generation, father_id, mother_id, is_late, created_by) VALUES (?, ?, ?, ?, ?, ?, false, ?) RETURNING id',
         [user.name || user.email, user.mobile_number || '', user.email,
-         ancestor ? ancestor.generation + 1 : 1, fatherId, motherId, assignedRole, session.id]
+         ancestor ? ancestor.generation + 1 : 1, fatherId, motherId, session.id]
       ) as any;
-      await query('UPDATE users SET status = ?, role = ?, member_id = ? WHERE id = ?', ['active', assignedRole, String(childResult.insertId), userId]);
+      const childMemberId = String(childResult.insertId ?? childResult[0]?.id);
+      await query('UPDATE users SET status = ?, role = ?, member_id = ? WHERE id = ?', ['active', assignedRole, childMemberId, userId]);
       return NextResponse.json({ success: true, message: 'Member approved and added to the family tree' });
     }
 
     if (action === 'reject') {
-      await query('DELETE FROM users WHERE id = ?', [userId]);
-      return NextResponse.json({ success: true, message: 'User rejected and removed' });
+      await query('UPDATE users SET status = ? WHERE id = ?', ['rejected', userId]);
+      return NextResponse.json({ success: true, message: 'User rejected' });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (err: any) {
-    console.error('Approval error:', err);
-    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
+    console.error('Approval POST error:', err);
+    return NextResponse.json({ error: err?.message || 'Failed to process request' }, { status: 500 });
   }
 }

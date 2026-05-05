@@ -3,7 +3,6 @@ import { query } from '@/lib/db';
 import { getAvatarUrl } from '@/lib/avatar';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -12,11 +11,12 @@ export async function GET(request: NextRequest) {
   try {
     // Fetch all members (or filtered by generation)
     const genFilter = generation ? ` AND m.generation = ${parseInt(generation)}` : '';
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const members = (await query(
       `SELECT m.id, m.full_name, m.generation, m.is_late, m.is_stub, m.gender,
               m.profile_photo_url, m.avatar_version, m.father_id, m.mother_id,
               m.mobile_number, m.email, m.location, m.dob,
-              CASE WHEN u.last_seen > NOW() - INTERVAL '10 minutes' THEN 1 ELSE 0 END as is_online
+              CASE WHEN u.last_seen > '${tenMinutesAgo}' THEN 1 ELSE 0 END as is_online
        FROM members m
        LEFT JOIN users u ON u.member_id = m.id
        WHERE m.deleted_at IS NULL${genFilter}

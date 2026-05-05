@@ -6,7 +6,6 @@ import { canViewHandlerInbox } from '@/lib/help/permissions';
 import bus, { type BusEvent } from '@/lib/help/bus';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
