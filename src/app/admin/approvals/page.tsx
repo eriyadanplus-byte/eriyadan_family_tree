@@ -30,11 +30,23 @@ export default function ApprovalsPage() {
     try {
       const res  = await fetch('/api/admin/approvals');
       const data = await res.json();
-      setPending(Array.isArray(data) ? data : []);
-      const defaults: Record<string, string> = {};
-      (Array.isArray(data) ? data : []).forEach((u: PendingUser) => { defaults[u.userId] = 'viewer'; });
-      setRoleMap(defaults);
-    } catch { setPending([]); } finally { setLoading(false); }
+      
+      // Debug: Log the response for troubleshooting
+      console.log('Approvals API response:', { status: res.status, data, isArray: Array.isArray(data) });
+      
+      if (!res.ok) {
+        console.error('Approvals API error:', data);
+        setPending([]);
+      } else {
+        setPending(Array.isArray(data) ? data : []);
+        const defaults: Record<string, string> = {};
+        (Array.isArray(data) ? data : []).forEach((u: PendingUser) => { defaults[u.userId] = 'viewer'; });
+        setRoleMap(defaults);
+      }
+    } catch (err) {
+      console.error('Fetch pending error:', err);
+      setPending([]);
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { fetchPending(); }, []);
@@ -156,18 +168,31 @@ export default function ApprovalsPage() {
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-3">
-              <button onClick={() => handle(user.userId, 'approve')} disabled={!!processing}
-                className="flex-1 h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, #4CAF72, #2E7D32)', color: '#fff' }}>
-                {processing === user.userId ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                Approve &amp; Add to Tree
+            {/* Action buttons - AGGRESSIVE STYLING FOR VISIBILITY */}
+            <div className="flex gap-3 mt-6 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <button 
+                onClick={() => handle(user.userId, 'approve')} 
+                disabled={!!processing}
+                className="flex-1 h-12 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                style={{ 
+                  background: '#22c55e', 
+                  color: '#ffffff',
+                  border: '2px solid #16a34a',
+                  boxShadow: '0 4px 12px rgba(34,197,94,0.3)'
+                }}>
+                {processing === user.userId ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                APPROVE
               </button>
-              <button onClick={() => handle(user.userId, 'reject')} disabled={!!processing}
-                className="px-6 h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                style={{ background: 'rgba(239,83,80,0.10)', color: '#EF5350', border: '1px solid rgba(239,83,80,0.22)' }}>
-                <XCircle className="w-4 h-4" /> Reject
+              <button 
+                onClick={() => handle(user.userId, 'reject')} 
+                disabled={!!processing}
+                className="px-8 h-12 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                style={{ 
+                  background: '#fef2f2', 
+                  color: '#dc2626',
+                  border: '2px solid #dc2626'
+                }}>
+                <XCircle className="w-5 h-5" /> REJECT
               </button>
             </div>
 
