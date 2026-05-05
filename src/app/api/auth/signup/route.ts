@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       if (stubMatch && stubMatch.stubMemberId === String(stubMemberId)) {
         const hashedPw = await hashPassword(password);
         const result = (await query(
-          `INSERT INTO users (email, name, mobile_number, password, role, status, member_id)
+          `INSERT INTO users (email, name, mobile_number, password_hash, role, status, member_id)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [email, name, mobile || '', hashedPw, 'viewer', 'active', stubMemberId]
         )) as any;
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     const hashedPw = await hashPassword(password);
     const pendingResult = (await query(
-      'INSERT INTO users (email, name, mobile_number, password, role, status, member_id, secondary_ancestor_id, relation_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO users (email, name, mobile_number, password_hash, role, status, member_id, secondary_ancestor_id, relation_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [email, name, mobile || '', hashedPw, 'viewer', 'pending', ancestorId || null, resolvedSecondaryId || null, relationTypeValue]
     )) as any;
     await linkAnonThread(request, pendingResult.insertId);

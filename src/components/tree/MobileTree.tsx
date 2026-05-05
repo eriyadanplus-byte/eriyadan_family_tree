@@ -76,6 +76,35 @@ export default function MobileTree({ members, focusId, onMemberClick }: Props) {
 
   const findNode = (id: string) => layout.nodes.find((node) => node.id === id);
 
+  function getEdgeEndpoints(edge: typeof layout.edges[0], source: typeof layout.nodes[0], target: typeof layout.nodes[0]) {
+    const sx = source.position.x + layout.offsetX + NODE_WIDTH / 2;
+    const sy = source.position.y + layout.offsetY + NODE_HEIGHT / 2;
+    const tx = target.position.x + layout.offsetX + NODE_WIDTH / 2;
+    const ty = target.position.y + layout.offsetY + NODE_HEIGHT / 2;
+
+    if (edge.type === 'parent-child' && edge.label === 'Parents') {
+      const child = members.find((m: any) => m.id === edge.target);
+      if (child?.fatherId && child?.motherId) {
+        const fatherNode = findNode(String(child.fatherId));
+        const motherNode = findNode(String(child.motherId));
+        if (fatherNode && motherNode) {
+          const fatherX = fatherNode.position.x + layout.offsetX + NODE_WIDTH / 2;
+          const fatherY = fatherNode.position.y + layout.offsetY + NODE_HEIGHT / 2;
+          const motherX = motherNode.position.x + layout.offsetX + NODE_WIDTH / 2;
+          const motherY = motherNode.position.y + layout.offsetY + NODE_HEIGHT / 2;
+          return {
+            x1: (fatherX + motherX) / 2,
+            y1: (fatherY + motherY) / 2,
+            x2: tx,
+            y2: ty,
+          };
+        }
+      }
+    }
+
+    return { x1: sx, y1: sy, x2: tx, y2: ty };
+  }
+
   return (
     <div ref={scrollContainerRef} className="w-full h-full overflow-auto py-4 px-3">
       <div className="relative min-h-full" style={{ minWidth: layout.width, minHeight: layout.height }}>
@@ -89,19 +118,16 @@ export default function MobileTree({ members, focusId, onMemberClick }: Props) {
             const source = findNode(edge.source);
             const target = findNode(edge.target);
             if (!source || !target) return null;
-            const sx = source.position.x + layout.offsetX + NODE_WIDTH / 2;
-            const sy = source.position.y + layout.offsetY + NODE_HEIGHT / 2;
-            const tx = target.position.x + layout.offsetX + NODE_WIDTH / 2;
-            const ty = target.position.y + layout.offsetY + NODE_HEIGHT / 2;
+            const { x1, y1, x2, y2 } = getEdgeEndpoints(edge, source, target);
             const isSpouse = edge.type === 'spouse';
             return (
               <line
                 key={edge.id}
                 data-edge-type={edge.type}
-                x1={sx}
-                y1={sy}
-                x2={tx}
-                y2={ty}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
                 stroke={isSpouse ? 'rgba(200,150,46,0.88)' : 'rgba(76,175,114,0.82)'}
                 strokeWidth={isSpouse ? 2.5 : 2}
                 strokeDasharray={isSpouse ? '6 4' : undefined}

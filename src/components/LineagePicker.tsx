@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { Search, User, ArrowRight, Plus, Minus } from 'lucide-react';
+import AncestorSearch, { AncestorResult } from './AncestorSearch';
 
 interface Member {
   id: string;
@@ -43,6 +44,8 @@ export default function LineagePicker({
   const [searchResults, setSearchResults] = useState<Member[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [anchorMember, setAnchorMember] = useState<Member | null>(null);
+  const [fatherResult, setFatherResult] = useState<AncestorResult | null>(null);
+  const [motherResult, setMotherResult] = useState<AncestorResult | null>(null);
 
   const selectedRelationOption = relationOptions.find(r => r.value === selectedRelation);
 
@@ -177,30 +180,25 @@ export default function LineagePicker({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-white/40 text-xs">Father</label>
-              <select
-                value={fatherId}
-                onChange={(e) => onFatherSelect(e.target.value)}
-                className="w-full h-10 rounded-lg glass-input px-3 text-sm"
-              >
-                <option value="">Select Father</option>
-                {anchorMember.gender === 'male' && (
-                  <option value={anchorMember.id}>{anchorMember.fullName} (self)</option>
-                )}
-                {/* In real implementation, fetch members of opposite gender */}
-              </select>
+              <AncestorSearch
+                value={fatherResult}
+                onChange={(result) => {
+                  setFatherResult(result);
+                  onFatherSelect(result?.id || '');
+                }}
+                placeholder="Search father..."
+              />
             </div>
             <div>
               <label className="text-white/40 text-xs">Mother</label>
-              <select
-                value={motherId}
-                onChange={(e) => onMotherSelect(e.target.value)}
-                className="w-full h-10 rounded-lg glass-input px-3 text-sm"
-              >
-                <option value="">Select Mother</option>
-                {anchorMember.gender === 'female' && (
-                  <option value={anchorMember.id}>{anchorMember.fullName} (self)</option>
-                )}
-              </select>
+              <AncestorSearch
+                value={motherResult}
+                onChange={(result) => {
+                  setMotherResult(result);
+                  onMotherSelect(result?.id || '');
+                }}
+                placeholder="Search mother..."
+              />
             </div>
           </div>
         </div>

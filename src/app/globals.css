@@ -80,6 +80,19 @@ body {
 
   .glass-input::placeholder { color: var(--text-subtle); }
 
+  /* Select / Dropdown */
+  select.glass-input {
+    background-color: rgba(30,30,30,0.95);
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+
+  select.glass-input option {
+    background-color: #1e1e1e;
+    color: var(--text-primary);
+    padding: 8px;
+  }
+
   /* Buttons */
   .btn-primary {
     @apply px-6 py-3 rounded-full font-semibold transition-all duration-300 inline-flex items-center justify-center gap-2;

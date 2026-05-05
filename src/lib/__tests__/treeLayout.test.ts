@@ -110,4 +110,71 @@ describe('computeLayout — spouse edges', () => {
       expect(spouseEdge!.target).toBe('2');
     });
   });
+
+  describe('parent-child edges (for mobile midpoint calculation)', () => {
+    it('creates parent-child edges with label "Parents" when both parents exist', () => {
+      const members: TreeNode[] = [
+        baseNode({ id: 'father-1', generation: 1, gender: 'male' }),
+        baseNode({ id: 'mother-1', generation: 1, gender: 'female' }),
+        baseNode({ id: 'child-1', generation: 2, fatherId: 'father-1', motherId: 'mother-1' }),
+      ];
+
+      const { edges } = computeLayout(members, true);
+      const parentEdges = edges.filter(e => e.type === 'parent-child' && e.label === 'Parents');
+
+      expect(parentEdges).toHaveLength(1);
+      expect(parentEdges[0].source).toBe('father-1');
+      expect(parentEdges[0].target).toBe('child-1');
+      expect(parentEdges[0].label).toBe('Parents');
+    });
+
+    it('creates parent edges with both parent IDs available for midpoint calculation', () => {
+      const members: TreeNode[] = [
+        baseNode({ id: 'f', generation: 1, gender: 'male' }),
+        baseNode({ id: 'm', generation: 1, gender: 'female' }),
+        baseNode({ id: 'c', generation: 2, fatherId: 'f', motherId: 'm' }),
+      ];
+
+      const { edges, nodes } = computeLayout(members, true);
+      const childNode = nodes.find(n => n.id === 'c');
+      const fatherNode = nodes.find(n => n.id === 'f');
+      const motherNode = nodes.find(n => n.id === 'm');
+
+      // Verify nodes have positions for mobile layout
+      expect(childNode).toBeDefined();
+      expect(fatherNode).toBeDefined();
+      expect(motherNode).toBeDefined();
+      expect(childNode!.position).toBeDefined();
+      expect(fatherNode!.position).toBeDefined();
+      expect(motherNode!.position).toBeDefined();
+    });
+
+    it('creates parent-child edges with father source when only father exists', () => {
+      const members: TreeNode[] = [
+        baseNode({ id: 'father-1', generation: 1, gender: 'male' }),
+        baseNode({ id: 'child-1', generation: 2, fatherId: 'father-1', motherId: undefined }),
+      ];
+
+      const { edges } = computeLayout(members, true);
+      const parentEdges = edges.filter(e => e.type === 'parent-child');
+
+      expect(parentEdges.length).toBeGreaterThan(0);
+      const fatherEdge = parentEdges.find(e => e.source === 'father-1' && e.target === 'child-1');
+      expect(fatherEdge).toBeDefined();
+    });
+
+    it('creates parent-child edges with mother source when only mother exists', () => {
+      const members: TreeNode[] = [
+        baseNode({ id: 'mother-1', generation: 1, gender: 'female' }),
+        baseNode({ id: 'child-1', generation: 2, fatherId: undefined, motherId: 'mother-1' }),
+      ];
+
+      const { edges } = computeLayout(members, true);
+      const parentEdges = edges.filter(e => e.type === 'parent-child');
+
+      expect(parentEdges.length).toBeGreaterThan(0);
+      const motherEdge = parentEdges.find(e => e.source === 'mother-1' && e.target === 'child-1');
+      expect(motherEdge).toBeDefined();
+    });
+  });
 });

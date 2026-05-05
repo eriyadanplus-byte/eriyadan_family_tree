@@ -405,11 +405,6 @@ export default function GenerationSeedPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fatherId: memberFatherId, motherId: memberMotherId }),
           });
-          await fetch(`/api/members/${spouse.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fatherId: memberFatherId, motherId: memberMotherId }),
-          });
 
           try {
             await linkSpouses(member.id, spouse.id);
@@ -494,11 +489,6 @@ export default function GenerationSeedPage() {
           const memberFatherId = isFather ? f.parentId : spouse.id;
           const memberMotherId = isFather ? spouse.id : f.parentId;
           await fetch(`/api/members/${member.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fatherId: memberFatherId, motherId: memberMotherId }),
-          });
-          await fetch(`/api/members/${spouse.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fatherId: memberFatherId, motherId: memberMotherId }),

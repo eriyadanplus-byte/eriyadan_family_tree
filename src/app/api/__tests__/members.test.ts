@@ -71,8 +71,8 @@ describe('GET /api/members — spouse join', () => {
     const response = await GET(req);
     const members = await response.json();
 
-    const m1 = members.find((m: any) => m.id === 1);
-    const m2 = members.find((m: any) => m.id === 2);
+    const m1 = members.find((m: any) => m.id === '1');
+    const m2 = members.find((m: any) => m.id === '2');
 
     expect(m1.spouseId).toBe('2');
     expect(m2.spouseId).toBe('1');
@@ -100,7 +100,7 @@ describe('GET /api/members — spouse join', () => {
     const response = await GET(req);
     const members = await response.json();
 
-    const m1 = members.find((m: any) => m.id === 1);
+    const m1 = members.find((m: any) => m.id === '1');
     expect(m1.spouseId).toBe('2');
   });
 });
