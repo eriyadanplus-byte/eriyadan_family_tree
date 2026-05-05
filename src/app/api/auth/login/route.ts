@@ -4,7 +4,6 @@ import { createToken, verifyPassword, hashPassword } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
@@ -31,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (!isValid) return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
 
     // Update last_seen so user appears online immediately
-    await query('UPDATE users SET last_seen = NOW() WHERE id = ?', [user.id]);
+    await query('UPDATE users SET last_seen = ? WHERE id = ?', [new Date().toISOString(), user.id]);
 
     const memberIdStr = user.member_id != null ? String(user.member_id) : null;
     const token = await createToken({ id: String(user.id), email: user.email, role: user.role, memberId: memberIdStr, canApprove: !!user.can_approve });
