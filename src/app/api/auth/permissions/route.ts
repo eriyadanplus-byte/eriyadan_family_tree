@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession, rolePermissions } from '@/lib/auth';
 
+export const runtime = 'edge';
 
 export async function GET(request: Request) {
   const session = await getSession(request);
