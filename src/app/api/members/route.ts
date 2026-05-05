@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
         full_name, mobile_number, email, location, bio,
         gender, dob, "current_role", company,
         dod, is_late, generation,
-        father_id, mother_id, spouse_id,
+        father_id, mother_id,
         is_stub, created_by, added_by_member_id,
         created_via
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -149,14 +149,26 @@ export async function POST(request: NextRequest) {
         fullName, mobileNumber, email || null, location || null, bio || null,
         gender || null, dob || null, current_role || null, company || null,
         dod || null, !!isLate, generation || 1,
-        fatherId || null, motherId || null, spouseId || null,
+        fatherId || null, motherId || null,
         !!isStub, session.id,
         addedByMemberId || null,
         createdVia || null,
       ]
     ) as any;
 
-    const newMember = await query('SELECT * FROM members WHERE id = ?', [result.insertId]) as any[];
+    const newMemberId = result.insertId;
+
+    // If spouseId provided, create relationship in spouses table
+    if (spouseId) {
+      const memberA = newMemberId < spouseId ? newMemberId : spouseId;
+      const memberB = newMemberId < spouseId ? spouseId : newMemberId;
+      await query(
+        `INSERT INTO spouses (member_a_id, member_b_id, status) VALUES (?, ?, 'current')`,
+        [memberA, memberB]
+      );
+    }
+
+    const newMember = await query('SELECT * FROM members WHERE id = ?', [newMemberId]) as any[];
     return NextResponse.json(mapMember(newMember[0]), { status: 201 });
   } catch (e: any) {
     const message = e?.sqlMessage || e?.message || 'Database error';

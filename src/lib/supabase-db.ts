@@ -129,6 +129,7 @@ async function sdkInsert(sql: string, params: any[]): Promise<{ insertId: any; a
 // ─── SDK-based UPDATE ──────────────────────────────────────────────────────
 
 async function sdkUpdate(sql: string, params: any[]): Promise<{ affectedRows: number }> {
+  console.log('[sdkUpdate] SQL:', sql, '| params:', params);
   if (!isSimpleSingleTable(sql)) {
     await execSql(sql, params);
     return { affectedRows: 1 };
@@ -160,9 +161,13 @@ async function sdkUpdate(sql: string, params: any[]): Promise<{ affectedRows: nu
     else q = (q as any).eq(col, val);
   }
 
-  const { error } = await q;
-  if (error) throw new Error(error.message);
-  return { affectedRows: 1 };
+  const { error, count } = await q;
+  if (error) {
+    console.error('[sdkUpdate] Error:', error.message);
+    throw new Error(error.message);
+  }
+  console.log('[sdkUpdate] Success, count:', count);
+  return { affectedRows: count || 1 };
 }
 
 // ─── SDK-based DELETE ──────────────────────────────────────────────────────
@@ -176,15 +181,30 @@ async function sdkDelete(sql: string, params: any[]): Promise<{ affectedRows: nu
 // ─── Fallback: exec_sql RPC (SECURITY INVOKER — RLS enforced) ─────────────
 
 async function execSql(sql: string, params: any[] = []): Promise<Row[]> {
-  const { data, error } = await supabase.rpc('run_sql', {
-    _sql: sql,
-    _params: params,
-  });
-  if (error) {
-    console.error('exec_sql error:', { message: error.message, sql, params });
-    throw new Error(error.message || 'Query failed');
+  // Replace ? placeholders with actual values for debugging
+  let debugSql = sql;
+  let paramArray = [...params];
+  for (const p of paramArray) {
+    const replacement = p === null ? 'NULL' : typeof p === 'boolean' ? (p ? 'TRUE' : 'FALSE') : typeof p === 'number' ? String(p) : `'${String(p).replace(/'/g, "''")}'`;
+    debugSql = debugSql.replace('?', replacement);
   }
-  return (data as Row[]) ?? [];
+  console.log('[execSql] SQL:', debugSql);
+  
+  try {
+    const { data, error } = await supabase.rpc('exec_sql', {
+      _sql: sql,
+      _params: params,
+    });
+    if (error) {
+      console.error('[execSql] RPC Error:', error.message, '| code:', error.code, '| details:', error.details);
+      throw new Error(error.message);
+    }
+    console.log('[execSql] Result count:', data?.length || 0);
+    return (data as Row[]) ?? [];
+  } catch (err: any) {
+    console.error('[execSql] Exception:', err.message);
+    throw err;
+  }
 }
 
 // ─── Public query() interface ──────────────────────────────────────────────
@@ -195,38 +215,34 @@ export async function query(sql: string, params: any[] = []): Promise<any> {
   const upper = trimmed.toUpperCase();
   const hasReturning = upper.includes(' RETURNING ');
 
+  console.log('[query] Using execSql for all queries | verb:', verb);
+
   try {
+    // For simplicity, use execSql for all queries - it works
     if (verb === 'SELECT') {
-      if (isSimpleSelect(trimmed)) return sdkSelect(trimmed, params);
       return execSql(trimmed, params);
     }
 
     if (verb === 'INSERT') {
-      // ON CONFLICT upserts or RETURNING → run_sql
-      if (upper.includes('ON CONFLICT') || hasReturning) {
-        const rows = await execSql(trimmed, params);
-        return { insertId: rows[0]?.id ?? null, affectedRows: rows.length };
-      }
-      return sdkInsert(trimmed, params);
+      const rows = await execSql(trimmed + ' RETURNING id', params);
+      return { insertId: rows[0]?.id ?? null, affectedRows: rows.length };
     }
 
     if (verb === 'UPDATE') {
-      if (hasReturning) {
-        const rows = await execSql(trimmed, params);
-        return rows;
-      }
-      return sdkUpdate(trimmed, params);
+      await execSql(trimmed, params);
+      return { affectedRows: 1 };
     }
 
     if (verb === 'DELETE') {
-      return sdkDelete(trimmed, params);
+      await execSql(trimmed, params);
+      return { affectedRows: 1 };
     }
 
     // DDL / other
     await execSql(trimmed, params);
     return [];
   } catch (err: any) {
-    console.error('query() error:', { message: err.message, sql: trimmed, params });
+    console.error('[query] ERROR:', err.message, '| sql:', trimmed.substring(0, 100));
     throw err;
   }
 }

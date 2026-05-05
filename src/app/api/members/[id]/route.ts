@@ -95,6 +95,33 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
   const { id } = await params;
   const now = new Date().toISOString();
-  await query('UPDATE members SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL', [now, id]);
-  return NextResponse.json({ success: true });
+  console.log('[DELETE] Starting delete for member:', id, 'session role:', session.role);
+  
+  try {
+    // First verify member exists
+    const existing = await query('SELECT id, full_name, deleted_at FROM members WHERE id = ?', [id]) as any[];
+    console.log('[DELETE] Existing member:', existing);
+    
+    if (!existing || existing.length === 0) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+    
+    if (existing[0].deleted_at) {
+      console.log('[DELETE] Member already deleted');
+      return NextResponse.json({ success: true, message: 'Already deleted' });
+    }
+    
+    // Now soft delete
+    const result = await query('UPDATE members SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL', [now, id]) as any;
+    console.log('[DELETE] Update result:', result);
+    
+    // Verify it was deleted
+    const verify = await query('SELECT deleted_at FROM members WHERE id = ?', [id]) as any[];
+    console.log('[DELETE] After delete, deleted_at:', verify[0]?.deleted_at);
+    
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error('[DELETE] Member delete error:', err.message, '| id:', id, '| stack:', err.stack);
+    return NextResponse.json({ error: 'Failed to delete member', detail: err.message }, { status: 500 });
+  }
 }

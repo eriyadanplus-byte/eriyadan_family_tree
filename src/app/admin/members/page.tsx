@@ -53,7 +53,7 @@ export default function AdminMembersPage() {
   const fetchMembers = async () => {
     try {
       setError(null);
-      const res = await fetch('/api/members');
+      const res = await fetch('/api/members', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to load members');
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error('Invalid response from server');
@@ -73,6 +73,7 @@ export default function AdminMembersPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingMember),
+        credentials: 'include',
       });
       await fetchMembers();
       setEditingMember(null);
@@ -85,7 +86,10 @@ export default function AdminMembersPage() {
     if (!confirm('Are you sure you want to delete this member?')) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/members/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/members/${id}`, { 
+        method: 'DELETE',
+        credentials: 'include',
+      });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         throw new Error(d.error || `Delete failed (${res.status})`);
