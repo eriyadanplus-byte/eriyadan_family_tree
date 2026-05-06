@@ -34,7 +34,11 @@
       "Bash(Select-Object -First 50)",
       "PowerShell(Get-ChildItem *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\" -Recurse -Force -ErrorAction SilentlyContinue)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(Get-Content \"C:\\\\Users\\\\SAHARA\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-SAHARA-CascadeProjects-family-tree\\\\01b87e8e-11f7-43f0-b9a7-97e16aa7da95\\\\tasks\\\\bn75mp8g7.output\" -Wait)",
+      "Bash(Select-String -Pattern \"added|updated|error|ERR|npm warn deprecated next|vulnerabilities\")",
+      "PowerShell(npm install *)",
+      "PowerShell(cd C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree; npx tsc --noEmit; Write-Output \"TypeScript exit code: $LASTEXITCODE\")"
     ]
   },
   "enableAllProjectMcpServers": true,
