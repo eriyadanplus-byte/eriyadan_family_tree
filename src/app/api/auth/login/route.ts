@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import { createToken, verifyPassword, hashPassword } from '@/lib/auth';
+import { createToken, verifyPassword } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
+import { createBrowserClient } from '@supabase/ssr';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
+
+function getSupabase() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+}
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
@@ -20,26 +27,46 @@ export async function POST(request: NextRequest) {
     const { email, password } = await request.json();
     if (!email || !password) return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
 
-    const rows = await query('SELECT * FROM users WHERE email = ?', [email]) as any[];
-    const user = rows[0];
+    const supabase = getSupabase();
+
+    // Uses SECURITY DEFINER function — accessible by anon, bypasses RLS safely
+    const { data: rows, error: rpcError } = await supabase.rpc('authenticate_user', { p_email: email });
+    if (rpcError) {
+      console.error('Login RPC error:', rpcError.message);
+      return NextResponse.json({ error: 'Login failed' }, { status: 500 });
+    }
+
+    const user = rows?.[0];
     if (!user) return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
 
-    if (user.status === 'pending') return NextResponse.json({ error: 'Your account is pending admin approval' }, { status: 403 });
+    if (user.status === 'pending')  return NextResponse.json({ error: 'Your account is pending admin approval' }, { status: 403 });
     if (user.status === 'inactive') return NextResponse.json({ error: 'Account is inactive' }, { status: 403 });
 
-    const isValid = user.password_hash === password || await verifyPassword(password, user.password_hash).catch(() => false);
+    const isValid = await verifyPassword(password, user.password_hash).catch(() => false);
     if (!isValid) return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
 
-    // Update last_seen so user appears online immediately
-    await query('UPDATE users SET last_seen = ? WHERE id = ?', [new Date().toISOString(), user.id]);
+    // Update last_seen via SECURITY DEFINER function
+    await supabase.rpc('update_last_seen', { p_user_id: user.id }).catch(() => {});
 
     const memberIdStr = user.member_id != null ? String(user.member_id) : null;
-    const token = await createToken({ id: String(user.id), email: user.email, role: user.role, memberId: memberIdStr, canApprove: !!user.can_approve });
+    const token = await createToken({
+      id: String(user.id),
+      email: user.email,
+      role: user.role,
+      memberId: memberIdStr,
+      canApprove: !!user.can_approve,
+    });
+
     const response = NextResponse.json({
       success: true,
-      user: { id: user.id, email: user.email, role: user.role, memberId: memberIdStr, canApprove: !!user.can_approve, name: user.name }
+      user: { id: user.id, email: user.email, role: user.role, memberId: memberIdStr, canApprove: !!user.can_approve, name: user.name },
     });
-    response.cookies.set('session', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 });
+    response.cookies.set('session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+    });
     return response;
   } catch (err: any) {
     console.error('Login error:', err);
