@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   }
 
   const rows = await query(
-    `SELECT m.id, m.full_name, m.generation, m.father_id, m.mother_id, m.spouse_id,
+    `SELECT m.id, m.full_name, m.generation, m.father_id, m.mother_id,
             mf.full_name AS father_name, mm.full_name AS mother_name,
             sp.id AS spouse_member_id,
             sp.full_name AS spouse_name
@@ -95,7 +95,7 @@ export async function PATCH(request: NextRequest) {
     [effectiveGeneration, fatherId || null, motherId || null, memberId]
   );
 
-  // Sync spouse in the spouses table
+  // Sync spouse in the spouses table only (no spouse_id column on members)
   const prevSpouseRows = await query(
     `SELECT CASE WHEN member_a_id = ? THEN member_b_id ELSE member_a_id END AS prev_spouse_id
      FROM spouses WHERE (member_a_id = ? OR member_b_id = ?) AND status = 'current'`,
@@ -108,18 +108,15 @@ export async function PATCH(request: NextRequest) {
       `UPDATE spouses SET status = 'former' WHERE (member_a_id = ? OR member_b_id = ?) AND status = 'current'`,
       [memberId, memberId]
     );
-    await query(
-      `UPDATE members SET spouse_id = NULL WHERE id = ? AND spouse_id = ?`,
-      [prevSpouseId, memberId]
-    );
   }
 
   if (spouseId) {
     await setSpouse(memberId, String(spouseId), 'current', memberId);
-    await query(`UPDATE members SET spouse_id = ? WHERE id = ?`, [spouseId, memberId]);
-    await query(`UPDATE members SET spouse_id = ? WHERE id = ?`, [memberId, spouseId]);
   } else {
-    await query(`UPDATE members SET spouse_id = NULL WHERE id = ?`, [memberId]);
+    await query(
+      `UPDATE spouses SET status = 'former' WHERE (member_a_id = ? OR member_b_id = ?) AND status = 'current'`,
+      [memberId, memberId]
+    );
   }
 
   return NextResponse.json({ success: true, generationAligned, effectiveGeneration });

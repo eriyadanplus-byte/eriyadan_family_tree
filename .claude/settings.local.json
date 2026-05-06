@@ -17,11 +17,17 @@
       "Bash(powershell *)",
       "Bash(rtk grep *)",
       "PowerShell(Test-Path *)",
-      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)"
+      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
+      "mcp__supabase__list_projects",
+      "Bash(claude mcp *)",
+      "PowerShell(claude mcp *)",
+      "Bash(Select-Object Name, Mode)",
+      "mcp__supabase__list_tables"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "supabase"
-  ],
-  "enableAllProjectMcpServers": true
+    "supabase",
+    "token-optimizer"
+  ]
 }

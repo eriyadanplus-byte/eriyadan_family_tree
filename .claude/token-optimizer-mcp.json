@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "token-optimizer": {
+      "command": "node",
+      "args": ["C:/Users/SAHARA/.token-optimizer-mcp/index.js"],
+      "env": {}
+    }
+  }
+}

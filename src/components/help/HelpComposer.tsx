@@ -26,8 +26,8 @@ export default function HelpComposer({ isOpen, onClose, triggerStage, contextSna
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
-  // Structured form for login_help
-  const isLoginHelp = triggerStage === 'login_help';
+  // Structured form for login_help and signup flows
+  const isLoginHelp = triggerStage === 'login_help' || triggerStage === 'signup_start' || triggerStage === 'signup_final_no_match';
   const [formName, setFormName] = useState('');
   const [formWhatsApp, setFormWhatsApp] = useState('');
   const [formLocation, setFormLocation] = useState('');

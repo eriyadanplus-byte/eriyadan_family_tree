@@ -41,7 +41,7 @@ export default function SignUpPage() {
   const [relationType, setRelationType] = useState<'child' | 'spouse' | 'sibling' | ''>('');
   const [autoApproved, setAutoApproved] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [helpStage, setHelpStage] = useState<'signup_start' | 'signup_final_no_match'>('signup_start');
+  const [helpStage, setHelpStage] = useState<'signup_start' | 'signup_final_no_match' | 'login_help'>('signup_start');
 
   const setField = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -313,7 +313,7 @@ export default function SignUpPage() {
       {/* Entry Point B: persistent "Talk to admin" help button, visible throughout signup */}
       <button
         type="button"
-        onClick={() => { setHelpStage('signup_start'); setShowHelp(true); }}
+        onClick={() => { setHelpStage('login_help'); setShowHelp(true); }}
         className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl transition-all hover:scale-105"
         style={{ background: 'rgba(13,31,13,0.96)', border: '1px solid rgba(76,175,114,0.30)', color: '#81C784', backdropFilter: 'blur(12px)' }}
         title="Need help? Talk to admin"

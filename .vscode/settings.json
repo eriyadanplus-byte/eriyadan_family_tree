@@ -1,0 +1,10 @@
+{
+    "chat.mcp.serverSampling": {
+        "family_tree/.vscode/mcp.json: supabase": {
+            "allowedModels": [
+                "copilot/auto",
+                "copilotcli/claude-haiku-4.5"
+            ]
+        }
+    }
+}

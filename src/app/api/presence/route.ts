@@ -3,7 +3,7 @@ import { getSession } from '@/lib/auth';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -33,10 +33,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const rows = await query(
-    `SELECT member_id FROM users
-     WHERE last_seen > ?
-     AND status = 'active'
-     AND member_id IS NOT NULL`,
+    `SELECT member_id FROM users WHERE last_seen > ? AND status = 'active' AND member_id IS NOT NULL`,
     [tenMinutesAgo]
   ) as any[];
   return NextResponse.json(rows.map((r: any) => String(r.member_id)));

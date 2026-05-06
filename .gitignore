@@ -32,6 +32,9 @@ dev.log
 tsconfig.tsbuildinfo
 *.tsbuildinfo
 
+# IDE / editor — may contain personal access tokens
+.vscode/mcp.json
+
 # OS
 .DS_Store
 Thumbs.db

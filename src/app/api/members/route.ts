@@ -3,7 +3,7 @@ import { query } from '@/lib/db';
 import { getSession, rolePermissions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 function mapMember(row: any) {
   return {
@@ -12,8 +12,8 @@ function mapMember(row: any) {
     mobileNumber:  row.mobile_number,
     email:         row.email,
     generation:    row.generation,
-    isLate:        !!row.is_late,
-    isOnline:      !!row.is_online,
+    isLate:        row.is_late === 1 || row.is_late === true,
+    isOnline:      false,
     birthYear:     row.birth_year,
     deathYear:     row.death_year,
     role:          row.role || 'viewer',
@@ -33,8 +33,8 @@ function mapMember(row: any) {
     whatsapp:      row.whatsapp,
     fatherId:      row.father_id != null ? String(row.father_id) : undefined,
     motherId:      row.mother_id != null ? String(row.mother_id) : undefined,
-    spouseId:      row.spouse_id != null ? String(row.spouse_id) : undefined,
-    isStub:        !!row.is_stub,
+    spouseId:      undefined as string | undefined,
+    isStub:        row.is_stub === 1 || row.is_stub === true,
     claimedByUserId: row.claimed_by_user_id,
     addedByMemberId: row.added_by_member_id,
     avatarVersion: row.avatar_version || 0,
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const conditions = ['m.deleted_at IS NULL'];
+  const conditions: string[] = ['m.deleted_at IS NULL'];
   const values: any[] = [];
 
   if (generation) {
@@ -74,12 +74,9 @@ export async function GET(request: NextRequest) {
     values.push(like, like, like);
   }
 
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-  const sql = `SELECT m.*, 
-    CASE WHEN u.last_seen > '${tenMinutesAgo}' THEN 1 ELSE 0 END as is_online
-    FROM members m
-    LEFT JOIN users u ON u.member_id = m.id
-    WHERE ${conditions.join(' AND ')} ORDER BY m.generation ASC, m.full_name ASC LIMIT ${limit}`;
+  const sql = `SELECT m.* FROM members m
+    WHERE ${conditions.join(' AND ')}
+    ORDER BY m.generation ASC, m.full_name ASC LIMIT ${limit}`;
   const rows = await query(sql, values) as any[];
 
   // Build spouse map from the spouses table (current relationships)
@@ -136,39 +133,31 @@ export async function POST(request: NextRequest) {
   }
 
     try {
-    const result = await query(
-      `INSERT INTO members (
-        full_name, mobile_number, email, location, bio,
-        gender, dob, "current_role", company,
-        dod, is_late, generation,
-        father_id, mother_id,
-        is_stub, created_by, added_by_member_id,
-        created_via
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    const id = crypto.randomUUID();
+    await query(
+      `INSERT INTO members (id, full_name, mobile_number, email, location, bio, gender, dob, current_role, company, dod, is_late, generation, father_id, mother_id, is_stub, created_by, added_by_member_id, created_via) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        fullName, mobileNumber, email || null, location || null, bio || null,
+        id, fullName, mobileNumber, email || null, location || null, bio || null,
         gender || null, dob || null, current_role || null, company || null,
-        dod || null, !!isLate, generation || 1,
+        dod || null, isLate ? 1 : 0, generation || 1,
         fatherId || null, motherId || null,
-        !!isStub, session.id,
+        isStub ? 1 : 0, session.id,
         addedByMemberId || null,
         createdVia || null,
       ]
-    ) as any;
-
-    const newMemberId = result.insertId;
+    );
 
     // If spouseId provided, create relationship in spouses table
     if (spouseId) {
-      const memberA = newMemberId < spouseId ? newMemberId : spouseId;
-      const memberB = newMemberId < spouseId ? spouseId : newMemberId;
+      const memberA = id < spouseId ? id : spouseId;
+      const memberB = id < spouseId ? spouseId : id;
       await query(
-        `INSERT INTO spouses (member_a_id, member_b_id, status) VALUES (?, ?, 'current')`,
-        [memberA, memberB]
+        `INSERT INTO spouses (id, member_a_id, member_b_id, status) VALUES (?, ?, ?, 'current')`,
+        [crypto.randomUUID(), memberA, memberB]
       );
     }
 
-    const newMember = await query('SELECT * FROM members WHERE id = ?', [newMemberId]) as any[];
+    const newMember = await query('SELECT * FROM members WHERE id = ?', [id]) as any[];
     return NextResponse.json(mapMember(newMember[0]), { status: 201 });
   } catch (e: any) {
     const message = e?.sqlMessage || e?.message || 'Database error';

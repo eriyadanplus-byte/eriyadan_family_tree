@@ -129,6 +129,8 @@ export default function GenerationSeedPage() {
   const [gen2Forms, setGen2Forms] = useState<MemberForm[]>([emptyMember()]);
   const [gen3Forms, setGen3Forms] = useState<MemberForm[]>([emptyMember()]);
   const [gen1Locked, setGen1Locked] = useState(false);
+  const [gen2Locked, setGen2Locked] = useState(false);
+  const [gen3Locked, setGen3Locked] = useState(false);
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
   const [createdMap, setCreatedMap] = useState<Record<string, CreatedMember>>({});
@@ -159,6 +161,7 @@ export default function GenerationSeedPage() {
       .then(r => r.ok ? r.json() : [])
       .then((data: any[]) => {
         if (data.length > 0) {
+          setGen2Locked(true);
           const members = data.map((m: any) => ({ id: String(m.id), fullName: m.fullName, gender: m.gender, generation: 2, fatherId: m.fatherId, motherId: m.motherId }));
           setGen2(members);
           setGen2Forms(data.map(() => emptyMember()));
@@ -176,6 +179,7 @@ export default function GenerationSeedPage() {
       .then(r => r.ok ? r.json() : [])
       .then((data: any[]) => {
         if (data.length > 0) {
+          setGen3Locked(true);
           const members = data.map((m: any) => ({ id: String(m.id), fullName: m.fullName, gender: m.gender, generation: 3, fatherId: m.fatherId, motherId: m.motherId }));
           setGen3(members);
           setGen3Forms(data.map(() => emptyMember()));
@@ -413,6 +417,8 @@ export default function GenerationSeedPage() {
           }
         }
       }
+      // Lock Gen2 to show saved members with edit buttons
+      setGen2Locked(true);
       if (shouldAdvance) {
         setStep(3);
         setGen3Forms([emptyMember()]);
@@ -501,6 +507,8 @@ export default function GenerationSeedPage() {
           }
         }
       }
+      // Lock Gen3 to show saved members with edit buttons
+      setGen3Locked(true);
       if (shouldAdvance) {
         router.push('/tree');
       }
@@ -800,6 +808,47 @@ export default function GenerationSeedPage() {
       {/* Step 2: Gen 2 */}
       {step === 2 && (
         <div className="space-y-6">
+          {gen2Locked && gen2.length > 0 ? (
+            <div className="glass-card p-5 rounded-2xl space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">Gen 2 Members</h4>
+                  <p className="text-xs text-white/50 mt-1">Saved members with edit option. Add new members below.</p>
+                </div>
+              </div>
+              <div className="grid gap-3">
+                {gen2.map((member) => (
+                  <div key={member.id} className="glass-card p-4 rounded-2xl border border-white/10 hover:border-emerald-400/30 transition-all">
+                    <div className="flex items-center justify-between gap-3">
+                      <Link href={`/profile/${member.id}`} className="flex-1">
+                        <p className="font-semibold text-white">{member.fullName}</p>
+                        <p className="text-[11px] text-white/50">Gen 2 · {member.gender ? member.gender : 'Unknown'}</p>
+                      </Link>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => {
+                          setEditingMember(member);
+                          setEditForm({
+                            fullName: member.fullName,
+                            gender: (member.gender as 'male' | 'female' | 'other') || '',
+                            generation: member.generation,
+                            fatherId: member.fatherId || '',
+                            motherId: member.motherId || '',
+                          });
+                        }} className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors" title="Edit member">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9-3z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Input forms for Gen 2 - always show for adding new members */}
           {gen2Forms.map((form, idx) => (
             <div key={idx}>
               {renderMemberFields(form, idx, patch => updateForm(gen2Forms, setGen2Forms, idx, patch), 2, gen1, gen2Forms, setGen2Forms)}
@@ -831,6 +880,47 @@ export default function GenerationSeedPage() {
       {/* Step 3: Gen 3 */}
       {step === 3 && (
         <div className="space-y-6">
+          {gen3Locked && gen3.length > 0 ? (
+            <div className="glass-card p-5 rounded-2xl space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">Gen 3 Members</h4>
+                  <p className="text-xs text-white/50 mt-1">Saved members with edit option. Add new members below.</p>
+                </div>
+              </div>
+              <div className="grid gap-3">
+                {gen3.map((member) => (
+                  <div key={member.id} className="glass-card p-4 rounded-2xl border border-white/10 hover:border-emerald-400/30 transition-all">
+                    <div className="flex items-center justify-between gap-3">
+                      <Link href={`/profile/${member.id}`} className="flex-1">
+                        <p className="font-semibold text-white">{member.fullName}</p>
+                        <p className="text-[11px] text-white/50">Gen 3 · {member.gender ? member.gender : 'Unknown'}</p>
+                      </Link>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => {
+                          setEditingMember(member);
+                          setEditForm({
+                            fullName: member.fullName,
+                            gender: (member.gender as 'male' | 'female' | 'other') || '',
+                            generation: member.generation,
+                            fatherId: member.fatherId || '',
+                            motherId: member.motherId || '',
+                          });
+                        }} className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors" title="Edit member">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9-3z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Input forms for Gen 3 - always show for adding new members */}
           {gen3Forms.map((form, idx) => (
             <div key={idx}>
               {renderMemberFields(form, idx, patch => updateForm(gen3Forms, setGen3Forms, idx, patch), 3, gen2, gen3Forms, setGen3Forms)}
