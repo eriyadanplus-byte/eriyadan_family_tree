@@ -8,8 +8,8 @@ export const runtime = 'edge';
 
 function getSupabase() {
   return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL)!,
+    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)!,
   );
 }
 
@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
     const { email, password } = await request.json();
     if (!email || !password) return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
 
-    const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const akey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const url  = process.env.NEXT_PUBLIC_SUPABASE_URL  || process.env.SUPABASE_URL;
+    const akey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
     if (!url || !akey) {
-      console.error('Login: missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+      console.error('Login: missing Supabase env vars (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_ANON_KEY)');
       return NextResponse.json({ error: 'Server misconfiguration: Supabase env vars not set' }, { status: 500 });
     }
 

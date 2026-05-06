@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     title: "Eriyadan's Legacy",
   },
   icons: {
+    icon: '/icons/icon-192.png',
     apple: '/icons/apple-touch-icon.png',
   },
 };
