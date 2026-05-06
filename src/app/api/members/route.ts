@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getSession, rolePermissions } from '@/lib/auth';
+import { setSpouse } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -139,22 +140,17 @@ export async function POST(request: NextRequest) {
       [
         id, fullName, mobileNumber, email || null, location || null, bio || null,
         gender || null, dob || null, current_role || null, company || null,
-        dod || null, isLate ? 1 : 0, generation || 1,
+        dod || null, !!isLate, generation || 1,
         fatherId || null, motherId || null,
-        isStub ? 1 : 0, session.id,
+        !!isStub, session.id,
         addedByMemberId || null,
         createdVia || null,
       ]
     );
 
-    // If spouseId provided, create relationship in spouses table
+    // If spouseId provided, create/upsert relationship in spouses table
     if (spouseId) {
-      const memberA = id < spouseId ? id : spouseId;
-      const memberB = id < spouseId ? spouseId : id;
-      await query(
-        `INSERT INTO spouses (id, member_a_id, member_b_id, status) VALUES (?, ?, ?, 'current')`,
-        [crypto.randomUUID(), memberA, memberB]
-      );
+      await setSpouse(id, spouseId, 'current', session.id);
     }
 
     const newMember = await query('SELECT * FROM members WHERE id = ?', [id]) as any[];

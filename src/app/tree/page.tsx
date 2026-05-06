@@ -8,6 +8,7 @@ import { TreeDeciduous, Search, Plus, User, Loader2, Crosshair } from 'lucide-re
 import BottomSheet from '@/components/BottomSheet';
 import DesktopTree from '@/components/tree/DesktopTree';
 import MobileTree from '@/components/tree/MobileTree';
+import { rolePermissions } from '@/lib/auth';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import { computeLayout } from '@/lib/treeLayout';
 
@@ -49,12 +50,6 @@ interface SessionUser {
   memberId: string | null;
 }
 
-const rolePermissions = {
-  super_admin: { canAdd: true, canEdit: true, canDelete: true, canExport: true, canManageUsers: true },
-  editor: { canAdd: true, canEdit: true, canDelete: true, canExport: false, canManageUsers: false },
-  contributor: { canAdd: true, canEdit: true, canDelete: false, canExport: false, canManageUsers: false },
-  viewer: { canAdd: false, canEdit: false, canDelete: false, canExport: false, canManageUsers: false },
-};
 
 function TreePageContent({ focusId }: { focusId: string | null }) {
   const router = useRouter();
@@ -99,11 +94,13 @@ function TreePageContent({ focusId }: { focusId: string | null }) {
     try {
       setError(null);
       const res = await fetch('/api/auth/session');
-      if (!res.ok) throw new Error('Failed to load session');
-      if (res.ok) {
-        const data = await res.json();
-        setSession(data.user);
+      if (res.status === 401) {
+        router.push('/login');
+        return;
       }
+      if (!res.ok) throw new Error('Failed to load session');
+      const data = await res.json();
+      setSession(data.user);
     } catch (error: any) {
       console.error('Failed to fetch session:', error);
       setError(error.message || 'Failed to load session');

@@ -224,7 +224,12 @@ export async function query(sql: string, params: any[] = []): Promise<any> {
     }
 
     if (verb === 'INSERT') {
-      const rows = await execSql(trimmed + ' RETURNING id', params);
+      // Use SDK for simple INSERTs — correct boolean/type handling
+      // Fall back to execSql only when ON CONFLICT is present (upsert)
+      if (!upper.includes(' ON CONFLICT ')) {
+        return sdkInsert(trimmed, params);
+      }
+      const rows = await execSql(trimmed, params);
       return { insertId: rows[0]?.id ?? null, affectedRows: rows.length };
     }
 

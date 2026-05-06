@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import LineagePicker from '@/components/LineagePicker';
@@ -23,6 +23,24 @@ export default function AddMemberForm() {
   const [anchor,      setAnchor]      = useState<Member | null>(null);
   const [relationType, setRelationType] = useState<'child' | 'spouse' | 'sibling'>('child');
 
+  // Re-sync parent/spouse IDs whenever the anchor or relation type changes
+  useEffect(() => {
+    if (!anchor) return;
+    if (relationType === 'child') {
+      setForm(p => ({
+        ...p,
+        generation: anchor.generation + 1,
+        fatherId: anchor.gender !== 'female' ? anchor.id : '',
+        motherId: anchor.gender === 'female' ? anchor.id : '',
+        spouseId: '',
+      }));
+    } else if (relationType === 'spouse') {
+      setForm(p => ({ ...p, generation: anchor.generation, spouseId: anchor.id, fatherId: '', motherId: '' }));
+    } else if (relationType === 'sibling') {
+      setForm(p => ({ ...p, generation: anchor.generation, fatherId: '', motherId: '', spouseId: '' }));
+    }
+  }, [relationType, anchor]);
+
   const change = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setForm(p => ({ ...p, [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value }));
@@ -31,7 +49,7 @@ export default function AddMemberForm() {
   const onAnchorSelect = useCallback((member: Member | null) => {
     setAnchor(member);
     if (!member) return;
-    if (relationType === 'child')   setForm(p => ({ ...p, generation: member.generation + 1, fatherId: member.gender === 'male' ? member.id : '', motherId: member.gender === 'female' ? member.id : '' }));
+    if (relationType === 'child')   setForm(p => ({ ...p, generation: member.generation + 1, fatherId: member.gender !== 'female' ? member.id : '', motherId: member.gender === 'female' ? member.id : '' }));
     if (relationType === 'spouse')  setForm(p => ({ ...p, spouseId: member.id }));
     if (relationType === 'sibling') setForm(p => ({ ...p, generation: member.generation }));
   }, [relationType]);

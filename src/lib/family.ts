@@ -38,7 +38,7 @@ export async function setSpouse(
   const b = aId < bId ? bId : aId;
   await query(
     `INSERT INTO spouses (member_a_id, member_b_id, status, created_by) VALUES (?, ?, ?, ?)
-     ON CONFLICT (member_a_id, member_b_id) DO UPDATE SET status = EXCLUDED.status, updated_at = NOW()`,
+     ON CONFLICT (member_a_id, member_b_id) DO UPDATE SET status = EXCLUDED.status`,
     [a, b, status, createdBy || 'system']
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Search, User, ArrowRight, Plus, Minus } from 'lucide-react';
+import { Search, User, ArrowRight, Minus } from 'lucide-react';
 import AncestorSearch, { AncestorResult } from './AncestorSearch';
 
 interface Member {
@@ -44,8 +44,7 @@ export default function LineagePicker({
   const [searchResults, setSearchResults] = useState<Member[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [anchorMember, setAnchorMember] = useState<Member | null>(null);
-  const [fatherResult, setFatherResult] = useState<AncestorResult | null>(null);
-  const [motherResult, setMotherResult] = useState<AncestorResult | null>(null);
+  const [parentResult, setParentResult] = useState<AncestorResult | null>(null);
 
   const selectedRelationOption = relationOptions.find(r => r.value === selectedRelation);
 
@@ -83,6 +82,31 @@ export default function LineagePicker({
     setSearchQuery('');
     setSearchResults([]);
   }, [onAnchorSelect]);
+
+  const handleParentSelect = useCallback((result: AncestorResult | null) => {
+    setParentResult(result);
+    if (!result) {
+      onFatherSelect('');
+      onMotherSelect('');
+      return;
+    }
+    if (result.spouseId) {
+      // Couple selected — assign by explicit husband/wife IDs first, then fall back to gender
+      const fatherId = result.husbandId || (result.gender === 'male' ? result.id : result.spouseId);
+      const motherId = result.wifeId   || (result.gender === 'female' ? result.id : result.spouseId);
+      onFatherSelect(fatherId ?? '');
+      onMotherSelect(motherId ?? '');
+    } else {
+      // Single parent — assign by gender
+      if (result.gender === 'female') {
+        onFatherSelect('');
+        onMotherSelect(result.id);
+      } else {
+        onFatherSelect(result.id);
+        onMotherSelect('');
+      }
+    }
+  }, [onFatherSelect, onMotherSelect]);
 
   const miniPreview = useMemo(() => {
     if (!anchorMember) return null;
@@ -175,32 +199,21 @@ export default function LineagePicker({
       </div>
 
       {selectedRelation === 'child' && anchorMember && (
-        <div className="space-y-4 p-4 glass rounded-xl border border-[#7B61FF]/20">
-          <div className="text-sm text-[#7B61FF] font-medium">Select Both Parents</div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-white/40 text-xs">Father</label>
-              <AncestorSearch
-                value={fatherResult}
-                onChange={(result) => {
-                  setFatherResult(result);
-                  onFatherSelect(result?.id || '');
-                }}
-                placeholder="Search father..."
-              />
-            </div>
-            <div>
-              <label className="text-white/40 text-xs">Mother</label>
-              <AncestorSearch
-                value={motherResult}
-                onChange={(result) => {
-                  setMotherResult(result);
-                  onMotherSelect(result?.id || '');
-                }}
-                placeholder="Search mother..."
-              />
-            </div>
-          </div>
+        <div className="space-y-3 p-4 glass rounded-xl border border-[#7B61FF]/20">
+          <div className="text-sm text-[#7B61FF] font-medium">Select Parents</div>
+          <AncestorSearch
+            value={parentResult}
+            onChange={handleParentSelect}
+            apiEndpoint="/api/auth/signup/search"
+            placeholder="Search parent or couple by name…"
+          />
+          {parentResult && (
+            <p className="text-xs text-white/50">
+              {parentResult.spouseId
+                ? `Father: ${parentResult.husbandName || (parentResult.gender === 'male' ? parentResult.fullName : parentResult.spouseName)} · Mother: ${parentResult.wifeName || (parentResult.gender === 'female' ? parentResult.fullName : parentResult.spouseName)}`
+                : `Single parent: ${parentResult.fullName} (${parentResult.gender === 'female' ? 'mother' : 'father'})`}
+            </p>
+          )}
         </div>
       )}
 

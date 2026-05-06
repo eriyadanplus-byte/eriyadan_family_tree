@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { getSession, rolePermissions } from '@/lib/auth';
 import { setSpouse } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
 
 async function resolveMemberId(session: any, reqMemberId?: string | null): Promise<string | null> {
-  if (reqMemberId && session.role === 'super_admin') return reqMemberId;
+  if (reqMemberId && rolePermissions[session.role]?.canEdit) return reqMemberId;
   return session.memberId ? String(session.memberId) : null;
 }
 
 export async function GET(request: NextRequest) {
   const session = await getSession(request);
-  if (!session || session.role !== 'super_admin') {
+  if (!session || !rolePermissions[session.role]?.canEdit) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const session = await getSession(request);
-  if (!session || session.role !== 'super_admin') {
+  if (!session || !rolePermissions[session.role]?.canEdit) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

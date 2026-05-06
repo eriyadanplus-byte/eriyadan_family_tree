@@ -39,3 +39,4 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION update_last_seen(uuid) TO anon;
+

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 const MAX_SIZE = 220 * 1024; // 220 KB hard limit (client compresses to ≤200KB)
 
@@ -33,7 +33,7 @@ export async function POST(
 
   // Only the member themselves or admin/editor can upload
   const isSelf = session.memberId === id;
-  const isPrivileged = ['super_admin', 'editor'].includes(session.role);
+  const isPrivileged = ['super_admin', 'editor', 'contributor'].includes(session.role);
   if (!isSelf && !isPrivileged) {
     return NextResponse.json({ error: 'Not authorized to change this avatar' }, { status: 403 });
   }
@@ -54,17 +54,17 @@ export async function POST(
   }
 
   // Upload to Supabase Storage bucket 'avatars'
-  const bucket = supabase.storage.from('avatars');
+  const bucket = supabaseAdmin.storage.from('avatars');
   const fileName = `${id}.jpg`;
   const { error: uploadError } = await bucket.upload(fileName, buffer, {
     contentType: 'image/jpeg',
     upsert: true,
   });
   if (uploadError) {
-    console.error('Supabase avatar upload error:', uploadError);
-    return NextResponse.json({ error: 'Failed to upload avatar to cloud storage' }, { status: 500 });
+    console.error('Supabase avatar upload error:', uploadError.message);
+    return NextResponse.json({ error: 'Failed to upload avatar to cloud storage', detail: uploadError.message }, { status: 500 });
   }
-  const { data: publicUrlData } = bucket.getPublicUrl(fileName);
+  const { data: publicUrlData } = supabaseAdmin.storage.from('avatars').getPublicUrl(fileName);
   const photoUrl = publicUrlData.publicUrl;
 
   // Bump avatar_version and set profile_photo_url
