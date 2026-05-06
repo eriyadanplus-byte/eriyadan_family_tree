@@ -9,15 +9,6 @@ export interface SessionUser {
   name?: string;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
-
-if (JWT_SECRET === 'dev-secret-change-in-production' && process.env.NODE_ENV === 'production') {
-  throw new Error(
-    'FATAL: JWT_SECRET is set to the insecure default value in production. ' +
-    'Set a strong random JWT_SECRET environment variable before starting the server.'
-  );
-}
-
 export const rolePermissions = {
   super_admin: { canAdd: true, canEdit: true, canDelete: true, canExport: true, canManageUsers: true },
   editor: { canAdd: true, canEdit: true, canDelete: true, canExport: false, canManageUsers: false },
@@ -40,7 +31,14 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 function getSecretKey() {
-  return new TextEncoder().encode(JWT_SECRET);
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+  if (secret === 'dev-secret-change-in-production' && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'FATAL: JWT_SECRET is set to the insecure default value in production. ' +
+      'Set a strong random JWT_SECRET environment variable before starting the server.'
+    );
+  }
+  return new TextEncoder().encode(secret);
 }
 
 export async function createToken(payload: { id: string; email: string; role: string; memberId?: string | null; canApprove?: boolean }): Promise<string> {
