@@ -25,7 +25,9 @@
       "mcp__supabase__list_tables",
       "Bash(rtk git *)",
       "PowerShell(cd \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\"; Get-ChildItem -Path . -Directory | Where-Object { $_.Name -notmatch '^node_modules|\\\\.next|\\\\.git' } | Select-Object Name)",
-      "PowerShell(cd \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\"; Get-ChildItem -Force | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} | Where-Object { $_.Name -notmatch '^node_modules|\\\\.next|\\\\.git|dist|build|\\\\.cache' })"
+      "PowerShell(cd \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\"; Get-ChildItem -Force | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} | Where-Object { $_.Name -notmatch '^node_modules|\\\\.next|\\\\.git|dist|build|\\\\.cache' })",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\" -Recurse -Filter \"*login*\" -Type File)",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ]
   },
   "enableAllProjectMcpServers": true,

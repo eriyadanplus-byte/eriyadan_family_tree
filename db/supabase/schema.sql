@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS members (
     father_id UUID,
     mother_id UUID,
     generation INTEGER,
+    "current_role" TEXT,
+    company TEXT,
     is_stub BOOLEAN DEFAULT FALSE,
     claimed_by_user_id UUID,
     added_by_member_id UUID,

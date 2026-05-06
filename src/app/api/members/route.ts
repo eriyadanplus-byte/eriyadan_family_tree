@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
     try {
     const id = crypto.randomUUID();
     await query(
-      `INSERT INTO members (id, full_name, mobile_number, email, location, bio, gender, dob, current_role, company, dod, is_late, generation, father_id, mother_id, is_stub, created_by, added_by_member_id, created_via) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO members (id, full_name, mobile_number, email, location, bio, gender, dob, "current_role", company, dod, is_late, generation, father_id, mother_id, is_stub, created_by, added_by_member_id, created_via) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, fullName, mobileNumber, email || null, location || null, bio || null,
         gender || null, dob || null, current_role || null, company || null,
