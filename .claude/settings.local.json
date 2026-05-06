@@ -22,7 +22,8 @@
       "Bash(claude mcp *)",
       "PowerShell(claude mcp *)",
       "Bash(Select-Object Name, Mode)",
-      "mcp__supabase__list_tables"
+      "mcp__supabase__list_tables",
+      "Bash(rtk git *)"
     ]
   },
   "enableAllProjectMcpServers": true,
