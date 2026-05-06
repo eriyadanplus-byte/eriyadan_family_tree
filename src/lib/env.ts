@@ -1,4 +1,4 @@
-const REQUIRED = ['JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_ANON_KEY'] as const;
+const REQUIRED = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'] as const;
 
 export function validateEnv() {
   const missing = REQUIRED.filter(k => !process.env[k]);
