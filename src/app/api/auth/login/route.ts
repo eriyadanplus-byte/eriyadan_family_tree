@@ -27,13 +27,20 @@ export async function POST(request: NextRequest) {
     const { email, password } = await request.json();
     if (!email || !password) return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
 
+    const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const akey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !akey) {
+      console.error('Login: missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+      return NextResponse.json({ error: 'Server misconfiguration: Supabase env vars not set' }, { status: 500 });
+    }
+
     const supabase = getSupabase();
 
     // Uses SECURITY DEFINER function — accessible by anon, bypasses RLS safely
     const { data: rows, error: rpcError } = await supabase.rpc('authenticate_user', { p_email: email });
     if (rpcError) {
-      console.error('Login RPC error:', rpcError.message);
-      return NextResponse.json({ error: 'Login failed' }, { status: 500 });
+      console.error('Login RPC error:', rpcError.message, rpcError.code, rpcError.details);
+      return NextResponse.json({ error: `DB error: ${rpcError.message}` }, { status: 500 });
     }
 
     const user = rows?.[0];
