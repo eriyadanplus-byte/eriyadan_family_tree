@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 const MAX_SIZE = 220 * 1024; // 220 KB hard limit (client compresses to ≤200KB)
 
@@ -48,15 +48,18 @@ export async function POST(
   }
 
   // Validate size
-  const buffer = new Uint8Array(await file.arrayBuffer());
-  if (buffer.byteLength > MAX_SIZE) {
-    return NextResponse.json({ error: `Image too large (${Math.round(buffer.byteLength / 1024)}KB). Max ${MAX_SIZE / 1024}KB.` }, { status: 400 });
+  const arrayBuffer = await file.arrayBuffer();
+  if (arrayBuffer.byteLength > MAX_SIZE) {
+    return NextResponse.json({ error: `Image too large (${Math.round(arrayBuffer.byteLength / 1024)}KB). Max ${MAX_SIZE / 1024}KB.` }, { status: 400 });
   }
 
   // Upload to Supabase Storage bucket 'avatars'
-  const bucket = supabaseAdmin.storage.from('avatars');
+  // Use Blob (not Uint8Array) — required for edge runtime compatibility
+  const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+  const supabase = getSupabaseAdmin();
+  const bucket = supabase.storage.from('avatars');
   const fileName = `${id}.jpg`;
-  const { error: uploadError } = await bucket.upload(fileName, buffer, {
+  const { error: uploadError } = await bucket.upload(fileName, blob, {
     contentType: 'image/jpeg',
     upsert: true,
   });
@@ -64,7 +67,7 @@ export async function POST(
     console.error('Supabase avatar upload error:', uploadError.message);
     return NextResponse.json({ error: 'Failed to upload avatar to cloud storage', detail: uploadError.message }, { status: 500 });
   }
-  const { data: publicUrlData } = supabaseAdmin.storage.from('avatars').getPublicUrl(fileName);
+  const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
   const photoUrl = publicUrlData.publicUrl;
 
   // Bump avatar_version and set profile_photo_url
