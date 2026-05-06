@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
     const isValid = await verifyPassword(password, user.password_hash).catch(() => false);
     if (!isValid) return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
 
-    // Update last_seen via SECURITY DEFINER function
-    await supabase.rpc('update_last_seen', { p_user_id: user.id }).catch(() => {});
+    // Update last_seen via SECURITY DEFINER function (fire-and-forget, ignore errors)
+    supabase.rpc('update_last_seen', { p_user_id: user.id }).then(() => {}, () => {});
 
     const memberIdStr = user.member_id != null ? String(user.member_id) : null;
     const token = await createToken({
