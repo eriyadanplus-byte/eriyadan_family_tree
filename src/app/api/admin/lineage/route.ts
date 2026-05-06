@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { getSession, rolePermissions } from '@/lib/auth';
+import { getSession, rolePermissions, type SessionUser } from '@/lib/auth';
 import { setSpouse } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
 
-async function resolveMemberId(session: any, reqMemberId?: string | null): Promise<string | null> {
+async function resolveMemberId(session: SessionUser, reqMemberId?: string | null): Promise<string | null> {
   if (reqMemberId && rolePermissions[session.role]?.canEdit) return reqMemberId;
   return session.memberId ? String(session.memberId) : null;
 }
