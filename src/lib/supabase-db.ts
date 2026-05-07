@@ -2,7 +2,7 @@
 // Simple single-table queries use the SDK directly (.from().select/insert/update/delete).
 // Complex queries (JOINs, CTEs, subqueries) use exec_sql (SECURITY INVOKER — RLS enforced).
 
-import { supabase } from './supabase';
+import { getSupabaseAdmin } from './supabase-admin';
 
 type Row = Record<string, any>;
 
@@ -75,7 +75,7 @@ async function sdkSelect(sql: string, params: any[]): Promise<Row[]> {
   const table = extractTable(sql);
   if (!table) return execSql(sql, params);
 
-  let q = supabase.from(table).select('*');
+  let q = getSupabaseAdmin().from(table).select('*');
 
   // Apply simple equality WHERE filters
   const filters = parseWhereEq(sql, params);
@@ -121,7 +121,7 @@ async function sdkInsert(sql: string, params: any[]): Promise<{ insertId: any; a
   const row: Row = {};
   cols.forEach((col, i) => { row[col] = params[i] ?? null; });
 
-  const { data, error } = await supabase.from(table).insert(row).select('id').single();
+  const { data, error } = await getSupabaseAdmin().from(table).insert(row).select('id').single();
   if (error) throw new Error(error.message);
   return { insertId: (data as any)?.id ?? null, affectedRows: 1 };
 }
@@ -155,7 +155,7 @@ async function sdkUpdate(sql: string, params: any[]): Promise<{ affectedRows: nu
   const whereFilters = parseWhereEq(sql.replace(/^.*?WHERE/is, 'WHERE'), params.slice(paramIdx));
   if (whereFilters === null) { await execSql(sql, params); return { affectedRows: 1 }; }
 
-  let q = supabase.from(table).update(updates);
+  let q = getSupabaseAdmin().from(table).update(updates);
   for (const [col, val] of Object.entries(whereFilters)) {
     if (val === null) q = (q as any).is(col, null);
     else q = (q as any).eq(col, val);
@@ -191,7 +191,7 @@ async function execSql(sql: string, params: any[] = []): Promise<Row[]> {
   console.log('[execSql] SQL:', debugSql);
   
   try {
-    const { data, error } = await supabase.rpc('exec_sql', {
+    const { data, error } = await getSupabaseAdmin().rpc('exec_sql', {
       _sql: sql,
       _params: params,
     });

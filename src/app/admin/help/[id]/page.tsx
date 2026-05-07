@@ -59,7 +59,7 @@ export default function HelpThreadPage() {
   useEffect(() => {
     fetch('/api/admin/users?role=editor')
       .then(r => r.ok ? r.json() : { users: [] })
-      .then(data => setEditors(data.users ?? []));
+      .then(data => setEditors(Array.isArray(data) ? data : (data.users ?? [])));
   }, []);
 
   useEffect(() => {

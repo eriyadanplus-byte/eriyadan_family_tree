@@ -11,7 +11,7 @@ interface AuditEntry {
   metadata: Record<string, any> | null;
   timestamp: string;
   actor: string;
-  targetMemberId: number | null;
+  targetMemberId: string | null;
   targetMemberName: string | null;
 }
 
