@@ -58,7 +58,9 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\" -Recurse -Force)",
       "Bash(Format-Table FullName)",
       "Bash(Get-ChildItem *)",
-      "Bash(grep -E \"page.tsx|\\\\.tsx$\")"
+      "Bash(grep -E \"page.tsx|\\\\.tsx$\")",
+      "Bash(find C:\\\\\\\\Users\\\\\\\\SAHARA\\\\\\\\CascadeProjects\\\\\\\\family_tree\\\\\\\\src -name \"*.d.ts\" -o -name \"*types*\")",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\\\\db\" -Recurse | Where-Object { $_.Extension -eq \".sql\" } | Sort-Object FullName)"
     ]
   },
   "enableAllProjectMcpServers": true,

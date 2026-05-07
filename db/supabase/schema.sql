@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT DEFAULT 'viewer',
     status TEXT DEFAULT 'pending',
     can_approve BOOLEAN DEFAULT FALSE,
+    permissions_override JSONB,
     last_login TIMESTAMPTZ,
     last_seen TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),

@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
   // Return living members with no linked user account (for admin credential assignment)
   if (noAccount === 'true') {
     const session = await getSession(request);
-    if (!session || !['super_admin'].includes(session.role)) {
+    if (!session || !['super_admin', 'editor'].includes(session.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
     try {
