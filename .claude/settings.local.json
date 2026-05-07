@@ -42,7 +42,19 @@
       "Bash(rtk tsc *)",
       "PowerShell(rtk tsc *)",
       "PowerShell(rtk git *)",
-      "PowerShell(git add *)"
+      "PowerShell(git add *)",
+      "Skill(gsd:plan-phase)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\" -Recurse -File | Select-Object -First 100 | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\" | ForEach-Object { Write-Output $_.Name })",
+      "PowerShell(head *)",
+      "PowerShell(\\(Get-Content \"node_modules\\\\lucide-react\\\\package.json\" | ConvertFrom-Json\\).version)",
+      "PowerShell(node -e \"const r = require\\('./node_modules/lucide-react'\\); console.log\\(Object.keys\\(r\\).slice\\(0,5\\).join\\(', '\\), '...', Object.keys\\(r\\).length, 'exports'\\)\" 2>&1)",
+      "PowerShell(\\(Get-Content \"node_modules\\\\@xyflow\\\\react\\\\package.json\" | ConvertFrom-Json\\) | Select-Object name, version, main, module, exports 2>&1)",
+      "PowerShell($pkg = Get-Content \"node_modules\\\\@xyflow\\\\react\\\\package.json\" | ConvertFrom-Json; $pkg.exports.'.' | ConvertTo-Json)",
+      "PowerShell(Get-Content \"node_modules\\\\@xyflow\\\\react\\\\dist\\\\esm\\\\index.mjs\" -TotalCount 1; \\(Get-Content \"node_modules\\\\@xyflow\\\\system\\\\package.json\" | ConvertFrom-Json\\) | Select-Object name, version)",
+      "PowerShell(\\(Get-Content \"node_modules\\\\@xyflow\\\\react\\\\package.json\" | ConvertFrom-Json\\).dependencies | ConvertTo-Json)",
+      "PowerShell(Get-ChildItem -Path \"node_modules\" -Recurse -Include \"package.json\" 2>$null | Where-Object { $_.FullName -match \"xyflow\" } | Select-Object -First 10 -ExpandProperty FullName)",
+      "PowerShell($p = Get-Content \"node_modules\\\\@xyflow\\\\react\\\\node_modules\\\\@xyflow\\\\system\\\\package.json\" | ConvertFrom-Json; $p.name, $p.version, $p.main, $p.module)"
     ]
   },
   "enableAllProjectMcpServers": true,

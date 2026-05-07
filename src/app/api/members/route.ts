@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getSession, rolePermissions } from '@/lib/auth';
 import { setSpouse } from '@/lib/family';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -49,12 +50,48 @@ export async function GET(request: NextRequest) {
   const generation = searchParams.get('generation');
   const search     = searchParams.get('search');
   const isLate     = searchParams.get('isLate');
+  const noAccount  = searchParams.get('noAccount');
   const limitParam = searchParams.get('limit');
   let limit = 200;
   if (limitParam) {
     const parsed = parseInt(limitParam, 10);
     if (!isNaN(parsed) && parsed > 0) {
       limit = Math.min(parsed, 200);
+    }
+  }
+
+  // Return living members with no linked user account (for admin credential assignment)
+  if (noAccount === 'true') {
+    const session = await getSession(request);
+    if (!session || !['super_admin'].includes(session.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+    try {
+      const supabase = getSupabaseAdmin();
+      // Fetch all user member_id links (service role bypasses RLS)
+      const { data: linkedUsers, error: linkedErr } = await supabase
+        .from('users')
+        .select('member_id')
+        .not('member_id', 'is', null);
+      if (linkedErr) return NextResponse.json({ error: linkedErr.message }, { status: 500 });
+      const linkedIds = new Set((linkedUsers ?? []).map((u: any) => String(u.member_id)));
+
+      // Fetch all non-deleted members (filter is_late client-side — column may be BOOLEAN or INTEGER)
+      const { data: memberRows, error: memberErr } = await supabase
+        .from('members')
+        .select('*')
+        .is('deleted_at', null)
+        .order('full_name')
+        .limit(limit);
+      if (memberErr) return NextResponse.json({ error: memberErr.message }, { status: 500 });
+
+      // Keep only living members (is_late falsy regardless of DB type) that have no linked account
+      const unlinked = (memberRows ?? []).filter(
+        (m: any) => !m.is_late && !linkedIds.has(String(m.id))
+      );
+      return NextResponse.json(unlinked.map(mapMember));
+    } catch (err: any) {
+      return NextResponse.json({ error: err?.message ?? 'Server error' }, { status: 500 });
     }
   }
 

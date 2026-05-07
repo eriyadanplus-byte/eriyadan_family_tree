@@ -56,16 +56,19 @@ export async function POST(request: NextRequest) {
     supabase.rpc('update_last_seen', { p_user_id: user.id }).then(() => {}, () => {});
 
     const memberIdStr = user.member_id != null ? String(user.member_id) : null;
+    const mustChangePassword = !!user.must_change_password;
     const token = await createToken({
       id: String(user.id),
       email: user.email,
       role: user.role,
       memberId: memberIdStr,
       canApprove: !!user.can_approve,
+      mustChangePassword,
     });
 
     const response = NextResponse.json({
       success: true,
+      mustChangePassword,
       user: { id: user.id, email: user.email, role: user.role, memberId: memberIdStr, canApprove: !!user.can_approve, name: user.name },
     });
     response.cookies.set('session', token, {

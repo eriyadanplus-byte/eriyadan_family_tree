@@ -39,6 +39,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <script dangerouslySetInnerHTML={{ __html: `(function(){var a=["bis_skin_checked","bis_register"];new MutationObserver(function(m){m.forEach(function(r){r.addedNodes.forEach(function(n){if(n.nodeType===1)a.forEach(function(x){if(n.hasAttribute&&n.hasAttribute(x))n.removeAttribute(x)})})})}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:a})})()` }} />
+        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(e){console.warn('SW registration failed:',e);})})}` }} />
       </head>
        <body className="font-sans antialiased" suppressHydrationWarning>
          <LayoutClient>{children}</LayoutClient>

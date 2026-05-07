@@ -1,10 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Transpile @xyflow/react so Next.js compiles it directly instead of treating
-  // its "use client" directive (present in the ESM bundle) as an RSC module
-  // boundary — which causes webpack module factory to be undefined at hydration.
-  transpilePackages: ['@xyflow/react', '@xyflow/system'],
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production'
       ? { exclude: ['error', 'warn'] }
@@ -42,6 +38,10 @@ const nextConfig = {
       {
         source: '/avatars/(.*)',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
+      },
+      {
+        source: '/sw.js',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' }],
       },
     ];
   },

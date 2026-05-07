@@ -36,6 +36,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/tree', request.url));
   }
 
+  // Force password change if flagged in JWT
+  if (
+    payload?.mustChangePassword === true &&
+    pathname !== '/change-password' &&
+    !pathname.startsWith('/api/') &&
+    pathname !== '/logout'
+  ) {
+    return NextResponse.redirect(new URL('/change-password', request.url));
+  }
+
   // Protect admin routes — require valid session AND allowed role
   if (pathname.startsWith('/admin')) {
     if (!session?.value) {

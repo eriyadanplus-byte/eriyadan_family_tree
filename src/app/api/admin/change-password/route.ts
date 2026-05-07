@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const session = await requireRole(['super_admin', 'editor']);
+    const session = await requireRole(['super_admin', 'editor'], request);
 
     const { currentPassword, newPassword } = await request.json();
     if (!currentPassword || !newPassword) {
@@ -28,19 +28,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch user's current password hash
-    const rows = await query('SELECT password FROM users WHERE id = ?', [session.id]) as any[];
+    const rows = await query('SELECT password_hash FROM users WHERE id = ?', [session.id]) as any[];
     if (rows.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const user = rows[0];
-    const isValid = await verifyPassword(currentPassword, user.password);
+    const isValid = await verifyPassword(currentPassword, user.password_hash);
     if (!isValid) {
       return NextResponse.json({ error: 'Current password is incorrect' }, { status: 401 });
     }
 
     const hashed = await hashPassword(newPassword);
-    await query('UPDATE users SET password = ? WHERE id = ?', [hashed, session.id]);
+    await query('UPDATE users SET password_hash = ? WHERE id = ?', [hashed, session.id]);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

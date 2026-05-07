@@ -19,6 +19,9 @@ interface Props {
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseMove: (e: React.MouseEvent) => void;
   onMouseUp: () => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
+  onTouchMove?: (e: React.TouchEvent) => void;
+  onTouchEnd?: () => void;
 }
 
 const NODE_W = 140;
@@ -46,6 +49,7 @@ export default function DesktopTree({
   members, zoom, pan, isDragging, focusId,
   onMemberClick, onZoomIn, onZoomOut, onFitToScreen,
   onMouseDown, onMouseMove, onMouseUp, selectedMember,
+  onTouchStart, onTouchMove, onTouchEnd,
 }: Props) {
 
   const { nodes, edges, lanes } = useMemo(() => {
@@ -133,7 +137,9 @@ export default function DesktopTree({
           backgroundSize: '48px 48px, 24px 24px',
         }}
         onMouseDown={onMouseDown} onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
+        onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}>
 
         <div className="absolute inset-0" style={{
           transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`,
@@ -279,8 +285,8 @@ export default function DesktopTree({
         </div>
       </div>
 
-      {/* Zoom controls */}
-      <div className="fixed bottom-8 right-8 z-40 hidden md:flex flex-col rounded-2xl overflow-hidden shadow-xl"
+      {/* Zoom controls — right side on desktop, left side on mobile (avoids overlap with Find Me) */}
+      <div className="fixed bottom-24 left-4 z-40 flex flex-col rounded-2xl overflow-hidden shadow-xl md:bottom-8 md:left-auto md:right-8"
         style={{ background: 'rgba(13,31,13,0.92)', border: '1px solid rgba(76,175,114,0.15)', backdropFilter: 'blur(16px)' }}>
         {[
           { Icon: ZoomIn,    action: onZoomIn,      title: 'Zoom in' },

@@ -7,6 +7,7 @@ export interface SessionUser {
   memberId: string | null;
   canApprove?: boolean;
   name?: string;
+  mustChangePassword?: boolean;
 }
 
 export const rolePermissions = {
@@ -38,7 +39,7 @@ function getSecretKey() {
   return new TextEncoder().encode(secret);
 }
 
-export async function createToken(payload: { id: string; email: string; role: string; memberId?: string | null; canApprove?: boolean }): Promise<string> {
+export async function createToken(payload: { id: string; email: string; role: string; memberId?: string | null; canApprove?: boolean; mustChangePassword?: boolean }): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -56,6 +57,7 @@ export async function verifyToken(token: string): Promise<SessionUser | null> {
       memberId: payload.memberId as string | null | undefined ?? null,
       canApprove: payload.canApprove as boolean | undefined,
       name: payload.name as string | undefined,
+      mustChangePassword: payload.mustChangePassword as boolean | undefined,
     };
   } catch {
     return null;

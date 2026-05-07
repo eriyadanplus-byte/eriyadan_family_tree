@@ -7,7 +7,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { TreeDeciduous, Search, Plus, User, Loader2, Crosshair } from 'lucide-react';
 import BottomSheet from '@/components/BottomSheet';
 import DesktopTree from '@/components/tree/DesktopTree';
-import MobileTree from '@/components/tree/MobileTree';
 import { rolePermissions } from '@/lib/auth';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import { computeLayout } from '@/lib/treeLayout';
@@ -168,6 +167,20 @@ function TreePageContent({ focusId }: { focusId: string | null }) {
   };
   const handleMouseUp = () => setIsDragging(false);
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      setIsDragging(true);
+      setDragStart({ x: t.clientX - pan.x, y: t.clientY - pan.y });
+    }
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    setPan({ x: t.clientX - dragStart.x, y: t.clientY - dragStart.y });
+  };
+  const handleTouchEnd = () => setIsDragging(false);
+
   const handleFindMe = () => {
     const targetId = session?.memberId ? String(session.memberId) : null;
     if (!targetId) return;
@@ -192,7 +205,6 @@ function TreePageContent({ focusId }: { focusId: string | null }) {
         });
       }
     }
-    // MobileTree handles its own scroll-to via focusId prop
   };
 
   if (loading) {
@@ -232,26 +244,25 @@ function TreePageContent({ focusId }: { focusId: string | null }) {
           ))}
         </div>
 
-        {isMobile ? (
-          <MobileTree members={filteredMembers} focusId={focusId} onMemberClick={setSelectedMember} />
-        ) : (
-          <DesktopTree
-            members={filteredMembers}
-            selectedMember={selectedMember}
-            focusId={focusId}
-            zoom={zoom}
-            pan={pan}
-            isDragging={isDragging}
-            dragStart={dragStart}
-            onMemberClick={setSelectedMember}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onFitToScreen={handleFitToScreen}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-          />
-        )}
+        <DesktopTree
+          members={filteredMembers}
+          selectedMember={selectedMember}
+          focusId={focusId}
+          zoom={zoom}
+          pan={pan}
+          isDragging={isDragging}
+          dragStart={dragStart}
+          onMemberClick={setSelectedMember}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onFitToScreen={handleFitToScreen}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        />
       </main>
 
       {/* Find Me Button */}

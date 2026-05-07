@@ -67,7 +67,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   // Landing, auth pages — bare layout, no chrome
   const isLanding = pathname === "/";
-  const isAuthPage = pathname === "/login" || pathname === "/signup";
+  const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/change-password";
   if (isLanding || isAuthPage) return <>{children}</>;
 
   const isAdmin = pathname?.startsWith("/admin");
