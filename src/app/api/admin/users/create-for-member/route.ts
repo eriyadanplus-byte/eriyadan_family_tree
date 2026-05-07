@@ -7,7 +7,7 @@ export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
-    await requireRole(['super_admin'], request);
+    const caller = await requireRole(['super_admin', 'editor'], request);
 
     const { memberId, email, password, role } = await request.json();
 
@@ -21,7 +21,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
 
-    const assignedRole = ['viewer', 'contributor', 'editor'].includes(role) ? role : 'viewer';
+    // Editors can only create viewer accounts
+    const assignedRole = caller.role === 'editor'
+      ? 'viewer'
+      : (['viewer', 'contributor', 'editor'].includes(role) ? role : 'viewer');
     const supabase = getSupabaseAdmin();
 
     // Verify member exists and is living

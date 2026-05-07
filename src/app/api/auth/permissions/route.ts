@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession, rolePermissions } from '@/lib/auth';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'edge';
 
@@ -13,15 +14,28 @@ export async function GET(request: Request) {
     );
   }
 
-  const permissions = rolePermissions[session.role] || {};
+  const base = { ...(rolePermissions[session.role] ?? {}) };
+
+  // Merge per-user overrides (false values disable role defaults)
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase
+      .from('users')
+      .select('permissions_override')
+      .eq('id', session.id)
+      .single();
+    if (data?.permissions_override) {
+      Object.assign(base, data.permissions_override);
+    }
+  } catch { /* ignore — fall back to role defaults */ }
 
   return NextResponse.json({
-    canAdd: permissions.canAdd ?? false,
-    canEdit: permissions.canEdit ?? false,
-    canDelete: permissions.canDelete ?? false,
-    canExport: permissions.canExport ?? false,
-    canManageUsers: permissions.canManageUsers ?? false,
-    canViewContact: true, // All authenticated family members can view contact info
+    canAdd: base.canAdd ?? false,
+    canEdit: base.canEdit ?? false,
+    canDelete: base.canDelete ?? false,
+    canExport: base.canExport ?? false,
+    canManageUsers: base.canManageUsers ?? false,
+    canViewContact: true,
     role: session.role,
   });
 }

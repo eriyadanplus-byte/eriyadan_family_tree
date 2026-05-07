@@ -2,6 +2,17 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+
+// Guard: super_admin only
+function useAdminGuard() {
+  const router = useRouter();
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.user?.role && d.user.role !== 'super_admin') router.replace('/admin'); })
+      .catch(() => {});
+  }, [router]);
+}
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Plus, TreeDeciduous, AlertCircle, Trash2, ChevronRight, Camera } from 'lucide-react';
 import { uploadAvatar } from '@/lib/image';
@@ -120,6 +131,7 @@ function PhotoPicker({ preview, inputId, onFile }: { preview: string; inputId: s
 }
 
 export default function GenerationSeedPage() {
+  useAdminGuard();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [gen1, setGen1] = useState<CreatedMember[]>([]);

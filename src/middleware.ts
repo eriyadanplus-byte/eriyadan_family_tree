@@ -12,7 +12,7 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
   }
 }
 
-const ADMIN_ROLES = new Set(['super_admin', 'editor']);
+const ADMIN_ROLES = new Set(['super_admin', 'editor', 'contributor']);
 
 export function middleware(request: NextRequest) {
   const session  = request.cookies.get('session');

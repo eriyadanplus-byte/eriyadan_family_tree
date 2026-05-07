@@ -29,6 +29,7 @@ const roleColors: Record<string, string> = {
 };
 
 export default function AdminCredentialsPage() {
+  const [currentRole, setCurrentRole]   = useState<string>('super_admin');
   const [members, setMembers]           = useState<MemberRow[]>([]);
   const [users, setUsers]               = useState<UserRow[]>([]);
   const [loadingMembers, setLM]         = useState(true);
@@ -53,6 +54,10 @@ export default function AdminCredentialsPage() {
   const [resetSuccess, setResetSuccess] = useState('');
 
   useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.user?.role) setCurrentRole(d.user.role); })
+      .catch(() => {});
     fetchMembers();
     fetchUsers();
   }, []);
@@ -222,8 +227,8 @@ export default function AdminCredentialsPage() {
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />{submitErr}
                       </div>
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="sm:col-span-2">
+                    <div className={`grid grid-cols-1 gap-3 ${currentRole !== 'editor' ? 'sm:grid-cols-3' : ''}`}>
+                      <div className={currentRole !== 'editor' ? 'sm:col-span-2' : ''}>
                         <label className="block text-xs font-semibold uppercase tracking-wider mb-1"
                           style={{ color: 'rgba(232,245,233,0.50)' }}>Email (Username)</label>
                         <input
@@ -235,19 +240,21 @@ export default function AdminCredentialsPage() {
                           required
                         />
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider mb-1"
-                          style={{ color: 'rgba(232,245,233,0.50)' }}>Role</label>
-                        <select
-                          value={formRole}
-                          onChange={e => setFormRole(e.target.value)}
-                          className="glass-input text-sm"
-                        >
-                          <option value="viewer">Viewer</option>
-                          <option value="contributor">Contributor</option>
-                          <option value="editor">Editor</option>
-                        </select>
-                      </div>
+                      {currentRole !== 'editor' && (
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-wider mb-1"
+                            style={{ color: 'rgba(232,245,233,0.50)' }}>Role</label>
+                          <select
+                            value={formRole}
+                            onChange={e => setFormRole(e.target.value)}
+                            className="glass-input text-sm"
+                          >
+                            <option value="viewer">Viewer</option>
+                            <option value="contributor">Contributor</option>
+                            <option value="editor">Editor</option>
+                          </select>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider mb-1"

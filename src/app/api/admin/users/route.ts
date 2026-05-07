@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     let usersQ = supabase
       .from('users')
-      .select('id, email, name, role, status, member_id, created_at')
+      .select('id, email, name, role, status, member_id, created_at, permissions_override')
       .order('created_at', { ascending: false });
     if (roleFilter) usersQ = usersQ.eq('role', roleFilter);
 
@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
       memberId: u.member_id,
       createdAt: u.created_at,
       memberName: u.member_id ? (memberMap[u.member_id] ?? null) : null,
+      permissionsOverride: u.permissions_override ?? null,
     }));
 
     return NextResponse.json(rows);
@@ -57,14 +58,28 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     await requireRole(['super_admin'], request);
-    const { userId, role } = await request.json();
-    if (!userId || !role) return NextResponse.json({ error: 'userId and role required' }, { status: 400 });
-    const validRoles = ['super_admin', 'editor', 'contributor', 'viewer'];
-    if (!validRoles.includes(role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    const body = await request.json();
+    const { userId } = body;
+    if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
     const supabase = getSupabaseAdmin();
-    const { error, count } = await supabase.from('users').update({ role }).eq('id', userId);
-    if (error) throw new Error(error.message);
-    if (count === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    // Update role
+    if (body.role !== undefined) {
+      const validRoles = ['super_admin', 'editor', 'contributor', 'viewer'];
+      if (!validRoles.includes(body.role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+      const { error } = await supabase.from('users').update({ role: body.role }).eq('id', userId);
+      if (error) throw new Error(error.message);
+    }
+
+    // Update permissions_override (merge with existing)
+    if (body.permissions_override !== undefined) {
+      const { data: current } = await supabase
+        .from('users').select('permissions_override').eq('id', userId).single();
+      const merged = { ...(current?.permissions_override ?? {}), ...body.permissions_override };
+      const { error } = await supabase.from('users').update({ permissions_override: merged }).eq('id', userId);
+      if (error) throw new Error(error.message);
+    }
+
     return NextResponse.json({ success: true });
   } catch { return NextResponse.json({ error: 'Failed to update user' }, { status: 500 }); }
 }

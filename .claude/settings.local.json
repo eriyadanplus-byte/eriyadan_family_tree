@@ -57,7 +57,8 @@
       "PowerShell($p = Get-Content \"node_modules\\\\@xyflow\\\\react\\\\node_modules\\\\@xyflow\\\\system\\\\package.json\" | ConvertFrom-Json; $p.name, $p.version, $p.main, $p.module)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\" -Recurse -Force)",
       "Bash(Format-Table FullName)",
-      "Bash(Get-ChildItem *)"
+      "Bash(Get-ChildItem *)",
+      "Bash(grep -E \"page.tsx|\\\\.tsx$\")"
     ]
   },
   "enableAllProjectMcpServers": true,

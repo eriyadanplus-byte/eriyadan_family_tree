@@ -39,6 +39,7 @@ interface Member {
 }
 
 export default function AdminMembersPage() {
+  const [currentRole, setCurrentRole] = useState<string>('super_admin');
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,6 +48,10 @@ export default function AdminMembersPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.user?.role) setCurrentRole(d.user.role); })
+      .catch(() => {});
     fetchMembers();
   }, []);
 
@@ -210,30 +215,39 @@ export default function AdminMembersPage() {
                   </td>
                   <td className="px-3 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/admin/lineage?memberId=${member.id}`}
-                        className="p-2 rounded-lg hover:bg-purple-500/20 transition-colors text-white/60 hover:text-purple-400"
-                        title="Set lineage (parents / spouse)"
-                      >
-                        <GitBranch className="w-4 h-4" />
-                      </Link>
-                      <button
-                        onClick={() => setEditingMember(member)}
-                        className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(member.id)}
-                        disabled={deletingId === member.id}
-                        className="p-2 rounded-lg hover:bg-rose-500/20 transition-colors text-white/60 hover:text-rose-400"
-                      >
-                        {deletingId === member.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
+                      {currentRole !== 'contributor' && (
+                        <Link
+                          href={`/admin/lineage?memberId=${member.id}`}
+                          className="p-2 rounded-lg hover:bg-purple-500/20 transition-colors text-white/60 hover:text-purple-400"
+                          title="Set lineage (parents / spouse)"
+                        >
+                          <GitBranch className="w-4 h-4" />
+                        </Link>
+                      )}
+                      {currentRole !== 'contributor' && (
+                        <button
+                          onClick={() => setEditingMember(member)}
+                          className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                      {currentRole !== 'contributor' && (
+                        <button
+                          onClick={() => handleDelete(member.id)}
+                          disabled={deletingId === member.id}
+                          className="p-2 rounded-lg hover:bg-rose-500/20 transition-colors text-white/60 hover:text-rose-400"
+                        >
+                          {deletingId === member.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                      {currentRole === 'contributor' && (
+                        <span className="text-xs" style={{ color: 'rgba(232,245,233,0.25)' }}>View only</span>
+                      )}
                     </div>
                   </td>
                 </tr>

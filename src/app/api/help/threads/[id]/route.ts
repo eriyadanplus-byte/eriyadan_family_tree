@@ -62,7 +62,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   ) as any[];
 
   const threadDetail = await query(
-    `SELECT ht.*, u.email as user_email, u.name as user_name
+    `SELECT ht.id, ht.user_id, ht.trigger_stage, ht.inquiry_kind, ht.context_snapshot,
+            ht.ancestor_name, ht.place, ht.contact_number, ht.whatsapp_number,
+            ht.status, ht.assigned_handler_id, ht.created_at, ht.resolved_at,
+            u.email as user_email, u.name as user_name
      FROM help_threads ht
      LEFT JOIN users u ON u.id = ht.user_id
      WHERE ht.id = ?`,

@@ -123,7 +123,10 @@ export default function HelpThreadPage() {
   );
   if (!thread) return <div className="p-6 text-sm" style={{ color: 'rgba(232,245,233,0.45)' }}>Thread not found.</div>;
 
-  const ctx = thread.context_snapshot as any;
+  const rawCtx = thread.context_snapshot;
+  const ctx = typeof rawCtx === 'string'
+    ? (() => { try { return JSON.parse(rawCtx); } catch { return null; } })()
+    : rawCtx;
   const displayName = thread.user_name || thread.user_email || ctx?.full_name || 'Anonymous';
   const isResolved = thread.status === 'resolved';
 

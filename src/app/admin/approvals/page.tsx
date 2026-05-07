@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2, AlertCircle, Users, Clock, GitBranch } from 'lucide-react';
 
 interface PendingUser {
@@ -15,6 +16,14 @@ const ROLES = [
 ];
 
 export default function ApprovalsPage() {
+  const router = useRouter();
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.user?.role && d.user.role !== 'super_admin') router.replace('/admin'); })
+      .catch(() => {});
+  }, [router]);
+
   const [pending, setPending] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);

@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export interface SessionUser {
   id: string;
@@ -77,7 +78,15 @@ export async function getSession(request?: Request): Promise<SessionUser | null>
 export async function hasPermission(permission: keyof typeof rolePermissions['super_admin'], request?: Request): Promise<boolean> {
   const session = await getSession(request);
   if (!session) return false;
-  return rolePermissions[session.role]?.[permission] ?? false;
+  const base = rolePermissions[session.role]?.[permission] ?? false;
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase
+      .from('users').select('permissions_override').eq('id', session.id).single();
+    const override = data?.permissions_override;
+    if (override && permission in override) return override[permission] as boolean;
+  } catch { /* fall back to role default */ }
+  return base;
 }
 
 export async function requireAuth(request?: Request): Promise<SessionUser> {

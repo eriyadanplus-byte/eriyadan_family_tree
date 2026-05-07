@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, Loader2, Check, MessageCircle } from 'lucide-react';
 
 interface UserRecord {
@@ -12,9 +13,10 @@ interface UserRecord {
   memberId: string | null;
   memberName: string | null;
   createdAt: string;
+  permissionsOverride: Record<string, boolean> | null;
 }
 
-const rolePermissions: Record<string, { canAdd: boolean; canEdit: boolean; canDelete: boolean; canExport: boolean }> = {
+const defaultRolePerms: Record<string, { canAdd: boolean; canEdit: boolean; canDelete: boolean; canExport: boolean }> = {
   super_admin: { canAdd: true, canEdit: true, canDelete: true, canExport: true },
   editor: { canAdd: true, canEdit: true, canDelete: true, canExport: false },
   contributor: { canAdd: true, canEdit: true, canDelete: false, canExport: false },
@@ -28,13 +30,28 @@ const roleColors: Record<string, string> = {
   viewer: 'bg-white/10 text-white/60 border-white/10',
 };
 
+function effectivePerms(user: UserRecord) {
+  const base = defaultRolePerms[user.role] ?? defaultRolePerms.viewer;
+  return { ...base, ...(user.permissionsOverride ?? {}) };
+}
+
 export default function AdminPermissionsPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [grantedEditors, setGrantedEditors] = useState<Set<string>>(new Set());
   const [grantIdMap, setGrantIdMap] = useState<Record<string, number>>({});
   const [togglingGrant, setTogglingGrant] = useState<string | null>(null);
+  const [togglingPerm, setTogglingPerm] = useState<string | null>(null);
+
+  // Guard: super_admin only
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.user?.role && d.user.role !== 'super_admin') router.replace('/admin'); })
+      .catch(() => {});
+  }, [router]);
 
   useEffect(() => {
     fetchUsers();
@@ -115,6 +132,32 @@ export default function AdminPermissionsPage() {
     }
   };
 
+  const togglePermission = async (userId: string, perm: string, current: boolean) => {
+    setTogglingPerm(`${userId}:${perm}`);
+    const newVal = !current;
+    // Optimistic update
+    setUsers(prev => prev.map(u => {
+      if (u.id !== userId) return u;
+      return { ...u, permissionsOverride: { ...(u.permissionsOverride ?? {}), [perm]: newVal } };
+    }));
+    try {
+      await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, permissions_override: { [perm]: newVal } }),
+      });
+    } catch {
+      // Revert on error
+      setUsers(prev => prev.map(u => {
+        if (u.id !== userId) return u;
+        const reverted = { ...(u.permissionsOverride ?? {}), [perm]: current };
+        return { ...u, permissionsOverride: reverted };
+      }));
+    } finally {
+      setTogglingPerm(null);
+    }
+  };
+
   return (
     <div className="p-8 lg:p-12">
       <header className="mb-8">
@@ -126,6 +169,9 @@ export default function AdminPermissionsPage() {
       <div className="glass rounded-2xl overflow-hidden">
         <div className="p-6 border-b border-white/12 bg-white/5">
           <h4 className="text-lg font-display text-white">Role Management</h4>
+          <p className="text-xs mt-1" style={{ color: 'rgba(232,245,233,0.40)' }}>
+            Click a permission cell to toggle it for a specific user. Overrides persist independently of role.
+          </p>
         </div>
         {loading ? (
           <div className="p-8 text-center text-white/40"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
@@ -147,7 +193,8 @@ export default function AdminPermissionsPage() {
             </thead>
             <tbody className="divide-y divide-white/5">
               {users.map(user => {
-                const perms = rolePermissions[user.role] || rolePermissions.viewer;
+                const perms = effectivePerms(user);
+                const isSuper = user.role === 'super_admin';
                 return (
                   <tr key={user.id} className="hover:bg-white/5 transition-all">
                     <td className="px-6 py-4">
@@ -183,17 +230,32 @@ export default function AdminPermissionsPage() {
                         {user.status}
                       </span>
                     </td>
-                    {(['canAdd', 'canEdit', 'canDelete', 'canExport'] as const).map(perm => (
-                      <td key={perm} className="px-6 py-4 text-center">
-                        <div title="Read-only" className={`w-6 h-6 rounded flex items-center justify-center cursor-default pointer-events-none ${
-                          perms[perm]
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : 'bg-white/5 text-white/20'
-                        }`}>
-                          {perms[perm] && <Check className="w-4 h-4" />}
-                        </div>
-                      </td>
-                    ))}
+                    {(['canAdd', 'canEdit', 'canDelete', 'canExport'] as const).map(perm => {
+                      const val = perms[perm];
+                      const key = `${user.id}:${perm}`;
+                      const spinning = togglingPerm === key;
+                      const hasOverride = user.permissionsOverride && perm in user.permissionsOverride;
+                      return (
+                        <td key={perm} className="px-6 py-4 text-center">
+                          <button
+                            onClick={() => !isSuper && togglePermission(user.id, perm, val)}
+                            disabled={spinning || isSuper}
+                            title={isSuper ? 'Super admin permissions cannot be changed' : (val ? `Disable ${perm.replace('can', '')}` : `Enable ${perm.replace('can', '')}`)}
+                            className={`w-6 h-6 rounded flex items-center justify-center mx-auto transition-all ${
+                              isSuper ? 'cursor-default opacity-70' : 'cursor-pointer hover:scale-110'
+                            } ${
+                              val
+                                ? hasOverride ? 'bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30' : 'bg-emerald-500/20 text-emerald-400'
+                                : hasOverride ? 'bg-red-500/15 text-red-400 ring-1 ring-red-500/20' : 'bg-white/5 text-white/20'
+                            }`}
+                          >
+                            {spinning
+                              ? <Loader2 className="w-3 h-3 animate-spin" />
+                              : val && <Check className="w-4 h-4" />}
+                          </button>
+                        </td>
+                      );
+                    })}
                     <td className="px-6 py-4 text-center">
                       {user.role === 'editor' ? (
                         <button
@@ -232,17 +294,20 @@ export default function AdminPermissionsPage() {
           </div>
           <div className="p-4 rounded-xl bg-white/5">
             <span className="text-emerald-400 font-bold text-sm">Editor</span>
-            <p className="text-white/40 text-xs mt-1">Can add, edit, and delete members</p>
+            <p className="text-white/40 text-xs mt-1">Can add, edit, and delete members. Can generate passwords.</p>
           </div>
           <div className="p-4 rounded-xl bg-white/5">
             <span className="text-blue-400 font-bold text-sm">Contributor</span>
-            <p className="text-white/40 text-xs mt-1">Can add and edit own entries</p>
+            <p className="text-white/40 text-xs mt-1">Can add members. View-only access to member list.</p>
           </div>
           <div className="p-4 rounded-xl bg-white/5">
             <span className="text-white/60 font-bold text-sm">Viewer</span>
             <p className="text-white/40 text-xs mt-1">Read-only access to the family tree</p>
           </div>
         </div>
+        <p className="text-xs mt-4" style={{ color: 'rgba(232,245,233,0.30)' }}>
+          Amber cells indicate a permission that overrides the role default. Red cells indicate a permission explicitly disabled.
+        </p>
       </div>
     </div>
   );

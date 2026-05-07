@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 // Simple inline SVG icons to avoid lucide-react hydration crashes
 const Icons: Record<string, JSX.Element> = {
@@ -17,20 +18,37 @@ const Icons: Record<string, JSX.Element> = {
   KeyRound: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>,
 };
 
-const NAV = [
-  { href: '/admin',             label: 'Dashboard',   icon: 'LayoutDashboard' },
-  { href: '/admin/approvals',   label: 'Approvals',   icon: 'UserPlus',  badge: true },
-  { href: '/admin/help',        label: 'Help Inbox',  icon: 'MessageCircle' },
-  { href: '/admin/members',     label: 'All Members', icon: 'Users' },
-  { href: '/admin/founding',    label: 'Generation Seed', icon: 'Trees' },
-  { href: '/admin/credentials', label: 'Credentials', icon: 'KeyRound' },
-  { href: '/admin/permissions', label: 'Permissions', icon: 'ShieldCheck' },
-  { href: '/admin/audit',       label: 'Audit Log',   icon: 'History' },
-  { href: '/admin/settings',    label: 'Settings',    icon: 'Settings' },
+const ALL_NAV = [
+  { href: '/admin',             label: 'Dashboard',       icon: 'LayoutDashboard', roles: ['super_admin', 'editor', 'contributor'] },
+  { href: '/admin/approvals',   label: 'Approvals',       icon: 'UserPlus',  badge: true, roles: ['super_admin'] },
+  { href: '/admin/help',        label: 'Help Inbox',      icon: 'MessageCircle', roles: ['super_admin', 'editor', 'contributor'] },
+  { href: '/admin/members',     label: 'All Members',     icon: 'Users', roles: ['super_admin', 'editor', 'contributor'] },
+  { href: '/admin/founding',    label: 'Generation Seed', icon: 'Trees', roles: ['super_admin'] },
+  { href: '/admin/credentials', label: 'Credentials',     icon: 'KeyRound', roles: ['super_admin', 'editor'] },
+  { href: '/admin/permissions', label: 'Permissions',     icon: 'ShieldCheck', roles: ['super_admin'] },
+  { href: '/admin/audit',       label: 'Audit Log',       icon: 'History', roles: ['super_admin', 'editor', 'contributor'] },
+  { href: '/admin/settings',    label: 'Settings',        icon: 'Settings', roles: ['super_admin', 'editor', 'contributor'] },
 ];
+
+const PANEL_LABELS: Record<string, string> = {
+  super_admin: "Admin Panel",
+  editor: "Editor Panel",
+  contributor: "Contributor Panel",
+};
 
 export default function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const [role, setRole] = useState<string>('super_admin');
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.user?.role) setRole(d.user.role); })
+      .catch(() => {});
+  }, []);
+
+  const NAV = ALL_NAV.filter(item => item.roles.includes(role));
+  const panelLabel = PANEL_LABELS[role] ?? 'Admin Panel';
 
   return (
     <div className="h-full flex flex-col py-4 px-3 overflow-x-hidden"
@@ -40,7 +58,7 @@ export default function AdminSidebar({ onNavigate }: { onNavigate?: () => void }
       <div className="px-3 mb-6">
         <div className="flex items-center gap-2 mb-1">
           <span style={{ color: '#81C784' }}>{Icons.Trees}</span>
-          <span className="font-display font-bold text-white text-sm">Admin Panel</span>
+          <span className="font-display font-bold text-white text-sm">{panelLabel}</span>
         </div>
         <p className="text-[10px] pl-6" style={{ color: 'rgba(232,245,233,0.35)' }}>Eriyadan's Legacy</p>
       </div>
