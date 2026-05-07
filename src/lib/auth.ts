@@ -99,5 +99,5 @@ export async function getActiveView(request?: Request): Promise<'member' | 'admi
 }
 
 export function canSwitchToAdmin(role: string): boolean {
-  return ['super_admin', 'editor', 'contributor'].includes(role);
+  return role === 'super_admin';
 }

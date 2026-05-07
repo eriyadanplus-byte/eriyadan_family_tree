@@ -16,7 +16,7 @@ interface UserRecord {
 
 const rolePermissions: Record<string, { canAdd: boolean; canEdit: boolean; canDelete: boolean; canExport: boolean }> = {
   super_admin: { canAdd: true, canEdit: true, canDelete: true, canExport: true },
-  editor: { canAdd: true, canEdit: true, canDelete: true, canExport: true },
+  editor: { canAdd: true, canEdit: true, canDelete: true, canExport: false },
   contributor: { canAdd: true, canEdit: true, canDelete: false, canExport: false },
   viewer: { canAdd: false, canEdit: false, canDelete: false, canExport: false },
 };
@@ -185,7 +185,7 @@ export default function AdminPermissionsPage() {
                     </td>
                     {(['canAdd', 'canEdit', 'canDelete', 'canExport'] as const).map(perm => (
                       <td key={perm} className="px-6 py-4 text-center">
-                        <div className={`w-6 h-6 rounded flex items-center justify-center ${
+                        <div title="Read-only" className={`w-6 h-6 rounded flex items-center justify-center cursor-default pointer-events-none ${
                           perms[perm]
                             ? 'bg-emerald-500/20 text-emerald-400'
                             : 'bg-white/5 text-white/20'

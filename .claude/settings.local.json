@@ -54,7 +54,10 @@
       "PowerShell(Get-Content \"node_modules\\\\@xyflow\\\\react\\\\dist\\\\esm\\\\index.mjs\" -TotalCount 1; \\(Get-Content \"node_modules\\\\@xyflow\\\\system\\\\package.json\" | ConvertFrom-Json\\) | Select-Object name, version)",
       "PowerShell(\\(Get-Content \"node_modules\\\\@xyflow\\\\react\\\\package.json\" | ConvertFrom-Json\\).dependencies | ConvertTo-Json)",
       "PowerShell(Get-ChildItem -Path \"node_modules\" -Recurse -Include \"package.json\" 2>$null | Where-Object { $_.FullName -match \"xyflow\" } | Select-Object -First 10 -ExpandProperty FullName)",
-      "PowerShell($p = Get-Content \"node_modules\\\\@xyflow\\\\react\\\\node_modules\\\\@xyflow\\\\system\\\\package.json\" | ConvertFrom-Json; $p.name, $p.version, $p.main, $p.module)"
+      "PowerShell($p = Get-Content \"node_modules\\\\@xyflow\\\\react\\\\node_modules\\\\@xyflow\\\\system\\\\package.json\" | ConvertFrom-Json; $p.name, $p.version, $p.main, $p.module)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\SAHARA\\\\CascadeProjects\\\\family_tree\" -Recurse -Force)",
+      "Bash(Format-Table FullName)",
+      "Bash(Get-ChildItem *)"
     ]
   },
   "enableAllProjectMcpServers": true,

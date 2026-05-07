@@ -12,7 +12,7 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
   }
 }
 
-const ADMIN_ROLES = new Set(['super_admin', 'editor', 'contributor']);
+const ADMIN_ROLES = new Set(['super_admin', 'editor']);
 
 export function middleware(request: NextRequest) {
   const session  = request.cookies.get('session');
@@ -92,7 +92,7 @@ export function middleware(request: NextRequest) {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "img-src 'self' data: https: blob: https://*.supabase.co",
-      "connect-src 'self' https://*.supabase.co",
+      "connect-src 'self' https://*.supabase.co https://fonts.gstatic.com",
       "object-src 'self' data:",
     ].join('; ')
   );

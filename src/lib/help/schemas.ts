@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const CreateThreadSchema = z.object({
-  trigger_stage: z.enum(['signup_start', 'signup_final_no_match', 'contact_form']),
+  trigger_stage: z.enum(['signup_start', 'signup_final_no_match', 'contact_form', 'login_help']),
   inquiry_kind: z.enum(['general', 'contact_form']).optional(),
   body: z.string().min(1).max(5000),
   context_snapshot: z.record(z.string(), z.unknown()).optional(),

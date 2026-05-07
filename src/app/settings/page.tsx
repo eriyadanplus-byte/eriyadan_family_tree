@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   TreeDeciduous, Search as SearchIcon, User, Settings as SettingsIcon,
-  Palette, Bell, Shield, Database, Globe, Moon, Sun, Loader2, Save, CheckCircle, AlertCircle
+  Bell, Shield, Database, Globe, Loader2, Save, CheckCircle, AlertCircle
 } from 'lucide-react';
 
 interface SessionUser {
@@ -19,7 +19,6 @@ export default function SettingsPage() {
   const [saveError, setSaveError] = useState('');
   const [session, setSession] = useState<SessionUser | null>(null);
   const [settings, setSettings] = useState({
-    theme: 'dark',
     notifications: true,
     privacyLevel: 'family',
     autoArchive: true,
@@ -83,38 +82,6 @@ export default function SettingsPage() {
         )}
 
         <div className="space-y-6">
-          <div className="glass-card p-6 rounded-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <Palette className="w-5 h-5 text-purple-400" />
-              <h2 className="text-lg font-display text-white">Appearance</h2>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white font-medium">Theme</p>
-                  <p className="text-white/40 text-sm">Choose your preferred look</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSettings({ ...settings, theme: 'dark' })}
-                    className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all ${settings.theme === 'dark' ? 'bg-purple-500/20 text-purple-400' : 'glass text-white/60'}`}
-                  >
-                    <Moon className="w-4 h-4" />
-                    <span>Dark</span>
-                  </button>
-                  <button
-                    onClick={() => setSettings({ ...settings, theme: 'light' })}
-                    className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all ${settings.theme === 'light' ? 'bg-purple-500/20 text-purple-400' : 'glass text-white/60'}`}
-                  >
-                    <Sun className="w-4 h-4" />
-                    <span>Light</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div className="glass-card p-6 rounded-2xl">
             <div className="flex items-center gap-3 mb-6">
               <Bell className="w-5 h-5 text-purple-400" />

@@ -24,7 +24,7 @@ export default function MobileBottomNav() {
       .then(d => {
         const role = d?.user?.role;
         setCanAdd(['super_admin', 'editor', 'contributor'].includes(role));
-        setIsAdmin(['super_admin', 'editor'].includes(role));
+        setIsAdmin(role === 'super_admin');
       }).catch(() => {});
   }, []);
 
