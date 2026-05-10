@@ -51,17 +51,28 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!canEdit) return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
 
   const body = await request.json();
-  const fields = [];
-  const values = [];
+
+  // When revoking deceased status, force dod to null regardless of what was sent
+  if (body.isLate === false) {
+    body.dod = null;
+  }
+  // When marking as deceased but dod is empty string, store as null
+  if (body.isLate === true && !body.dod) {
+    body.dod = null;
+  }
+
+  const fields: string[] = [];
+  const values: any[] = [];
 
   // Full field map for privileged roles (editor, contributor, super_admin)
+  // NOTE: spouseId is NOT in the members table - spouses are tracked in the spouses table
   const fullFieldMap: Record<string, string> = {
     fullName: 'full_name', email: 'email', generation: 'generation', isLate: 'is_late',
     birthYear: 'birth_year', deathYear: 'death_year', profilePhotoUrl: 'profile_photo_url',
     gender: 'gender', dob: 'dob', dod: 'dod', location: 'location', bio: 'bio',
     currentRole: 'current_role', company: 'company', instagram: 'instagram',
     linkedin: 'linkedin', twitter: 'twitter', facebook: 'facebook', youtube: 'youtube', whatsapp: 'whatsapp',
-    fatherId: 'father_id', motherId: 'mother_id', spouseId: 'spouse_id', mobileNumber: 'mobile_number',
+    fatherId: 'father_id', motherId: 'mother_id', mobileNumber: 'mobile_number',
     isStub: 'is_stub', claimedByUserId: 'claimed_by_user_id', addedByMemberId: 'added_by_member_id', avatarVersion: 'avatar_version',
   };
   // Restricted field map for self-editing members (no lineage/admin fields)
@@ -75,16 +86,32 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const fieldMap = isPrivileged ? fullFieldMap : selfFieldMap;
 
   for (const [key, dbField] of Object.entries(fieldMap)) {
-    if (body[key] !== undefined) { fields.push(`"${dbField}" = ?`); values.push(body[key]); }
+    if (body[key] !== undefined) {
+      fields.push(`"${dbField}" = ?`);
+      // Keep booleans as booleans — PostgreSQL is_late/is_stub are BOOLEAN columns
+      // and exec_sql RPC handles jsonb booleans correctly (TRUE/FALSE)
+      if (key === 'isLate' || key === 'isStub') {
+        values.push(!!body[key]);
+      } else {
+        values.push(body[key] ?? null);
+      }
+    }
   }
+  // Always include dod in the update when isLate is explicitly set, even if dod wasn't in the body
+  if (body.isLate !== undefined && !fields.some(f => f.includes('"dod"'))) {
+    fields.push('"dod" = ?');
+    values.push(body.isLate ? (body.dod ?? null) : null);
+  }
+
   if (fields.length === 0) return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   values.push(id);
+  const sql = `UPDATE members SET ${fields.join(', ')} WHERE id = ? AND deleted_at IS NULL`;
   try {
-    await query(`UPDATE members SET ${fields.join(', ')} WHERE id = ? AND deleted_at IS NULL`, values);
+    await query(sql, values);
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error('Member update error:', err.message, '| SQL:', `UPDATE members SET ${fields.join(', ')} WHERE id = ?`);
-    return NextResponse.json({ error: 'Failed to save member', detail: err.message }, { status: 500 });
+    console.error('[PUT /api/members] ERROR:', err.message, '| member:', id);
+    return NextResponse.json({ error: err.message || 'Failed to save member' }, { status: 500 });
   }
 }
 

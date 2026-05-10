@@ -46,6 +46,7 @@ export default function AdminMembersPage() {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/session')
@@ -73,17 +74,23 @@ export default function AdminMembersPage() {
 
   const handleEdit = async () => {
     if (!editingMember) return;
+    setModalError(null);
     try {
-      await fetch(`/api/members/${editingMember.id}`, {
+      const res = await fetch(`/api/members/${editingMember.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingMember),
         credentials: 'include',
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setModalError(d.error || 'Failed to save changes.');
+        return;
+      }
       await fetchMembers();
       setEditingMember(null);
-    } catch (error) {
-      console.error('Failed to update member:', error);
+    } catch (err: any) {
+      setModalError(err.message || 'Failed to update member.');
     }
   };
 
@@ -226,7 +233,7 @@ export default function AdminMembersPage() {
                       )}
                       {currentRole !== 'contributor' && (
                         <button
-                          onClick={() => setEditingMember(member)}
+                          onClick={() => { setEditingMember(member); setModalError(null); }}
                           className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
                         >
                           <Edit className="w-4 h-4" />
@@ -269,6 +276,13 @@ export default function AdminMembersPage() {
             </div>
 
             <div className="space-y-6">
+              {modalError && (
+                <div className="flex items-center gap-3 p-3 rounded-xl text-sm"
+                  style={{ background: 'rgba(239,83,80,0.10)', border: '1px solid rgba(239,83,80,0.20)', color: '#EF5350' }}>
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {modalError}
+                </div>
+              )}
               {/* Avatar */}
               <div className="flex flex-col items-center gap-2">
                 <AvatarUpload
@@ -401,7 +415,7 @@ export default function AdminMembersPage() {
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={editingMember.isLate}
-                    onChange={(e) => setEditingMember({ ...editingMember, isLate: e.target.checked })}
+                    onChange={(e) => { setModalError(null); setEditingMember({ ...editingMember, isLate: e.target.checked, dod: e.target.checked ? editingMember.dod : '' }); }}
                     className="w-4 h-4 rounded" />
                   <span className="text-white text-sm">Mark as Deceased</span>
                 </label>
