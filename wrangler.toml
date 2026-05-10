@@ -3,3 +3,10 @@ compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
 pages_build_output_dir = ".vercel/output/static"
+
+# Required environment variables (set in Cloudflare Dashboard → Settings → Environment Variables):
+# - NEXT_PUBLIC_SUPABASE_URL
+# - NEXT_PUBLIC_SUPABASE_ANON_KEY  
+# - SUPABASE_SERVICE_ROLE_KEY
+# - JWT_SECRET
+# - NODE_ENV (production)
