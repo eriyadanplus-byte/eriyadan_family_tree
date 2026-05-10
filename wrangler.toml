@@ -18,8 +18,8 @@ migrations_dir = "db/d1/migrations"
 # For Cloudflare Pages + Next.js, use @cloudflare/next-on-pages instead.
 # See: https://developers.cloudflare.com/pages/framework-guides/nextjs/
 
-# Cloudflare Pages will automatically detect and build Next.js projects
-# No explicit output directory needed - handled by the Pages build process
+# The @cloudflare/next-on-pages adapter outputs to .vercel/output/static
+pages_build_output_dir = ".vercel/output/static"
 
 [vars]
 NODE_ENV = "production"
