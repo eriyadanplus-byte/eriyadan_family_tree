@@ -1,25 +1,4 @@
 name = "eriyaden-legacy"
 compatibility_date = "2024-01-01"
 
-# ── D1 Database ──────────────────────────────────────────────────────────────
-# Steps to connect:
-# 1. Run: wrangler d1 create eriyaden
-# 2. Copy the database_id from the output and paste below
-# 3. Run: wrangler d1 migrations apply eriyaden --local   (test locally)
-# 4. Run: wrangler d1 migrations apply eriyaden --remote  (apply to production)
-
-[[d1_databases]]
-binding      = "DB"
-database_name = "eriyaden"
-database_id  = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
-migrations_dir = "db/d1/migrations"
-
-# ── Next.js (if deploying via Cloudflare Pages) ───────────────────────────────
-# For Cloudflare Pages + Next.js, use @cloudflare/next-on-pages instead.
-# See: https://developers.cloudflare.com/pages/framework-guides/nextjs/
-
-# The @cloudflare/next-on-pages adapter outputs to .vercel/output/static
 pages_build_output_dir = ".vercel/output/static"
-
-[vars]
-NODE_ENV = "production"
