@@ -16,12 +16,19 @@
  */
 
 const { execSync } = require("child_process");
-const { cpSync, copyFileSync, existsSync, readdirSync } = require("fs");
+const { cpSync, copyFileSync, existsSync, readdirSync, rmSync } = require("fs");
 const path = require("path");
 
 const ROOT = process.cwd();
 const OPEN_NEXT = path.join(ROOT, ".open-next");
 const ASSETS = path.join(OPEN_NEXT, "assets");
+
+// Clean previous build to ensure fresh output
+console.log("→ Cleaning previous build...");
+if (existsSync(OPEN_NEXT)) {
+  rmSync(OPEN_NEXT, { recursive: true, force: true });
+  console.log("  ✓ Cleaned .open-next/");
+}
 
 console.log("→ Building with @opennextjs/cloudflare...");
 console.log(`  CWD: ${ROOT}`);
