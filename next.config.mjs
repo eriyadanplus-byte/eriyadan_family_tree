@@ -25,7 +25,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob:",
+              "img-src 'self' data: https: blob: https://*.supabase.co",
               "connect-src 'self' https://*.supabase.co https://fonts.gstatic.com",
             ].join('; '),
           },

@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       email: session.email,
       role: session.role,
       memberId: session.memberId,
+      name: session.name,
     },
   });
 }
-

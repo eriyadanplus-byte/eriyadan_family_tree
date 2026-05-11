@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
+      path: '/',
     });
     return response;
   } catch (err: any) {
@@ -82,4 +83,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Login failed' }, { status: 500 });
   }
 }
-

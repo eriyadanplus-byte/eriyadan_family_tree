@@ -26,8 +26,8 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Sign in failed');
-      router.push(data.mustChangePassword ? '/change-password' : '/tree');
       router.refresh();
+      router.push(data.mustChangePassword ? '/change-password' : '/tree');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {

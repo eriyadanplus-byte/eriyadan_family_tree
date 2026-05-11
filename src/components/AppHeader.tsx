@@ -118,9 +118,9 @@ export default function AppHeader({
   useEffect(() => {
     fetch("/api/auth/session")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d?.user && setSession(d.user))
+      .then((d) => setSession(d?.user ?? null))
       .catch(() => {});
-  }, []);
+  }, [pathname]);
 
   const handleScroll = useCallback(() => {
     const y = window.scrollY;
