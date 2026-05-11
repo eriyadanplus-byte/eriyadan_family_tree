@@ -16,7 +16,7 @@
  */
 
 const { execSync } = require("child_process");
-const { cpSync, copyFileSync, existsSync } = require("fs");
+const { cpSync, copyFileSync, existsSync, readdirSync } = require("fs");
 const path = require("path");
 
 const ROOT = process.cwd();
@@ -24,7 +24,23 @@ const OPEN_NEXT = path.join(ROOT, ".open-next");
 const ASSETS = path.join(OPEN_NEXT, "assets");
 
 console.log("→ Building with @opennextjs/cloudflare...");
+console.log(`  CWD: ${ROOT}`);
 execSync("npx opennextjs-cloudflare build", { stdio: "inherit" });
+
+// Debug: show what was generated
+console.log("\n→ Build output check:");
+if (existsSync(OPEN_NEXT)) {
+  console.log(`  .open-next contents: ${readdirSync(OPEN_NEXT).join(", ")}`);
+} else {
+  console.log("  ERROR: .open-next/ not found!");
+  process.exit(1);
+}
+
+// Ensure assets exists
+if (!existsSync(ASSETS)) {
+  console.log("  ERROR: .open-next/assets/ not found!");
+  process.exit(1);
+}
 
 const companions = ["cloudflare", "middleware", ".build", "server-functions"];
 
@@ -34,10 +50,25 @@ for (const dir of companions) {
   if (existsSync(src)) {
     console.log(`→ Copying .open-next/${dir} → assets/${dir}`);
     cpSync(src, dest, { recursive: true, force: true });
+    console.log(`  ✓ Copied ${dir}`);
+  } else {
+    console.log(`  ⚠ Skipped ${dir} (not found)`);
   }
 }
 
 console.log("→ Copying worker.js → assets/_worker.js");
-copyFileSync(path.join(OPEN_NEXT, "worker.js"), path.join(ASSETS, "_worker.js"));
+const workerSrc = path.join(OPEN_NEXT, "worker.js");
+const workerDest = path.join(ASSETS, "_worker.js");
+if (existsSync(workerSrc)) {
+  copyFileSync(workerSrc, workerDest);
+  console.log(`  ✓ Copied worker.js`);
+} else {
+  console.log("  ERROR: worker.js not found!");
+  process.exit(1);
+}
 
-console.log("✓ CF Pages build complete");
+// Debug: show final assets contents
+console.log("\n→ Final assets/ contents:");
+console.log(`  ${readdirSync(ASSETS, { recursive: true }).join("\n  ")}`);
+
+console.log("\n✓ CF Pages build complete");
