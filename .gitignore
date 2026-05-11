@@ -15,6 +15,7 @@ out/
 # Build artifacts
 dist/
 build/
+.open-next/
 
 # Test artifacts
 /test-results/

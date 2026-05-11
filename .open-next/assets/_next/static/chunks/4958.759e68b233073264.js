@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[4958],{4958:(e,n,s)=>{s.r(n),s.d(n,{default:()=>l});var t=s(5155),a=s(382);function l(e){let{nodes:n,edges:s}=e;return(0,t.jsx)(a.Gc,{nodes:n,edges:s,fitView:!0,nodesDraggable:!1,nodesConnectable:!1,elementsSelectable:!1,style:{background:"transparent"}})}}}]);
