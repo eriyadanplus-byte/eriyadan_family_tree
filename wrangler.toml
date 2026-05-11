@@ -1,7 +1,4 @@
 name = "eriyadan-family-tree"
-compatibility_date = "2026-01-01"
+compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
-
-[assets]
-directory = ".open-next/assets"
-binding = "ASSETS"
+pages_build_output_dir = ".open-next/assets"
