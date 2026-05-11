@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "cf:build": "npx opennextjs-cloudflare build"
+    "cf:build": "npx opennextjs-cloudflare build",
+    "pages:build": "npx opennextjs-cloudflare build && cp .open-next/worker.js .open-next/assets/_worker.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
