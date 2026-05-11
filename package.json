@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "cf:build": "npx opennextjs-cloudflare build",
-    "pages:build": "npx opennextjs-cloudflare build && cp .open-next/worker.js .open-next/assets/_worker.js"
+    "pages:build": "node scripts/cf-pages-build.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
