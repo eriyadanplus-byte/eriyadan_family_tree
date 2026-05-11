@@ -5,7 +5,6 @@ import { setSpouse } from '@/lib/family';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 function mapMember(row: any) {
   return {
@@ -197,3 +196,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

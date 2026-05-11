@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: Request) {
   const [membersRow] = await query('SELECT COUNT(*) as count FROM members WHERE deleted_at IS NULL') as any[];
@@ -14,3 +13,4 @@ export async function GET(request: Request) {
     users: usersRow?.count ?? 0,
   });
 }
+

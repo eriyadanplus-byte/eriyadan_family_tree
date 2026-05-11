@@ -3,7 +3,6 @@ import { query } from '@/lib/db';
 import { getSession, hashPassword } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function PATCH(request: NextRequest) {
   const session = await getSession(request);
@@ -36,3 +35,4 @@ export async function PATCH(request: NextRequest) {
   await query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values);
   return NextResponse.json({ success: true });
 }
+

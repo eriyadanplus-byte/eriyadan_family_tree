@@ -16,7 +16,6 @@ async function linkAnonThread(request: NextRequest, userId: string) {
 }
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
@@ -139,3 +138,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
   }
 }
+

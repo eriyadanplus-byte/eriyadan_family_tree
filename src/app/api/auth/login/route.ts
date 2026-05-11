@@ -4,7 +4,6 @@ import { rateLimit } from '@/lib/rate-limit';
 import { createBrowserClient } from '@supabase/ssr';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 function getSupabase() {
   return createBrowserClient(
@@ -83,3 +82,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Login failed' }, { status: 500 });
   }
 }
+

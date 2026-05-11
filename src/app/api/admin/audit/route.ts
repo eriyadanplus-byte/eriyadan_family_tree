@@ -3,7 +3,6 @@ import { requireRole } from '@/lib/auth';
 import { getAuditLog } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
@@ -11,3 +10,4 @@ export async function GET(request: Request) {
     return NextResponse.json(await getAuditLog());
   } catch { return NextResponse.json({ error: 'Unauthorised' }, { status: 403 }); }
 }
+

@@ -3,7 +3,6 @@ import { query } from '@/lib/db';
 import { getAvatarUrl } from '@/lib/avatar';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -91,3 +90,4 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ results });
 }
+

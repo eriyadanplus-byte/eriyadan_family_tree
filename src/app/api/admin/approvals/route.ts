@@ -4,7 +4,6 @@ import { getSession } from '@/lib/auth';
 import { descendantIds } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
@@ -189,3 +188,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err?.message || 'Failed to process request' }, { status: 500 });
   }
 }
+

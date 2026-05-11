@@ -3,7 +3,6 @@ import { query } from '@/lib/db';
 import { requireRole } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
@@ -42,3 +41,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
   }
 }
+

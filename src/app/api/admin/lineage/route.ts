@@ -4,7 +4,6 @@ import { getSession, rolePermissions, type SessionUser } from '@/lib/auth';
 import { setSpouse } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 async function resolveMemberId(session: SessionUser, reqMemberId?: string | null): Promise<string | null> {
   if (reqMemberId && rolePermissions[session.role]?.canEdit) return reqMemberId;
@@ -121,3 +120,4 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ success: true, generationAligned, effectiveGeneration });
 }
+

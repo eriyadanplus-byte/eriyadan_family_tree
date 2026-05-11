@@ -7,7 +7,6 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 const MAX_SIZE = 220 * 1024; // 220 KB hard limit (client compresses to ≤200KB)
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function POST(
   request: NextRequest,

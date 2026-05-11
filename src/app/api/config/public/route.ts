@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
@@ -15,3 +14,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ inAppMessage: '' });
   }
 }
+

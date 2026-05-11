@@ -3,7 +3,6 @@ import { requireRole } from '@/lib/auth';
 import { setSpouse } from '@/lib/family';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,3 +22,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err.message || 'Failed to link spouses' }, { status: 500 });
   }
 }
+

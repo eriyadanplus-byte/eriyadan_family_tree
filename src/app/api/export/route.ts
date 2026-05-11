@@ -4,7 +4,6 @@ import { query } from '@/lib/db';
 import { getSession, rolePermissions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   const session = await getSession(request);
@@ -62,3 +61,4 @@ export async function GET(request: NextRequest) {
     headers: { 'Content-Disposition': `attachment; filename="family-tree-${date}.json"` }
   });
 }
+

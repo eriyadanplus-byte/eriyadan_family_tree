@@ -3,7 +3,6 @@ import { query } from '@/lib/db';
 import { requireRole } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 async function getSetting(key: string, defaultValue: string): Promise<string> {
   try {
@@ -63,3 +62,4 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to update config' }, { status: 500 });
   }
 }
+

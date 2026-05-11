@@ -3,7 +3,6 @@ import { requireRole } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   try {
@@ -83,3 +82,4 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch { return NextResponse.json({ error: 'Failed to update user' }, { status: 500 }); }
 }
+

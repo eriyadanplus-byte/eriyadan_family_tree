@@ -4,7 +4,6 @@ import { query } from '@/lib/db';
 import { GrantSchema } from '@/lib/help/schemas';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: Request) {
   const session = await getSession(request);
@@ -54,3 +53,4 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ id: result.insertId }, { status: 201 });
 }
+

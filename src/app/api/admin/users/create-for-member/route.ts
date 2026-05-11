@@ -3,7 +3,6 @@ import { requireRole, hashPassword } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,3 +89,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create account' }, { status: 500 });
   }
 }
+
